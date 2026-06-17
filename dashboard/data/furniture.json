@@ -1,0 +1,254 @@
+{
+  "id": "furniture",
+  "name": "Мебель",
+  "icon": "🛋️",
+  "updatedAt": "2026-06-17T13:22:03.065Z",
+  "totalModels": 0,
+  "totalWithFavorites": 0,
+  "topByFavorites": [],
+  "popularSlugs": [],
+  "newSlugs": [],
+  "subcats": [
+    {
+      "id": "sofas",
+      "name": "Диваны",
+      "subcat": "sofas"
+    },
+    {
+      "id": "armchairs",
+      "name": "Кресла",
+      "subcat": "armchairs"
+    },
+    {
+      "id": "beds",
+      "name": "Кровати",
+      "subcat": "beds"
+    },
+    {
+      "id": "tables",
+      "name": "Столы",
+      "subcat": "tables"
+    },
+    {
+      "id": "chairs",
+      "name": "Стулья",
+      "subcat": "chairs"
+    },
+    {
+      "id": "table-chair",
+      "name": "Стол + стул",
+      "subcat": "table-and-chair"
+    },
+    {
+      "id": "wardrobes",
+      "name": "Шкафы",
+      "subcat": "wardrobes"
+    },
+    {
+      "id": "shelving",
+      "name": "Стеллаж",
+      "subcat": "shelving"
+    },
+    {
+      "id": "cabinets",
+      "name": "Тумбы, комоды",
+      "subcat": "cabinets-commodes"
+    },
+    {
+      "id": "tv-stand",
+      "name": "ТВ стенка",
+      "subcat": "tv-stand"
+    },
+    {
+      "id": "office",
+      "name": "Офисная мебель",
+      "subcat": "office-furniture"
+    },
+    {
+      "id": "hallway",
+      "name": "Прихожая",
+      "subcat": "hallway"
+    },
+    {
+      "id": "headboards",
+      "name": "Изголовья",
+      "subcat": "headboards"
+    },
+    {
+      "id": "console",
+      "name": "Консоль",
+      "subcat": "console"
+    },
+    {
+      "id": "dressing-table",
+      "name": "Туалетный столик",
+      "subcat": "dressing-table"
+    },
+    {
+      "id": "soft-other",
+      "name": "Другая мягкая",
+      "subcat": "other-soft-furniture"
+    },
+    {
+      "id": "furniture-other",
+      "name": "Другое",
+      "subcat": "other-furniture"
+    }
+  ],
+  "subcatStats": {
+    "sofas": {
+      "id": "sofas",
+      "name": "Диваны",
+      "subcat": "sofas",
+      "totalFavorites": 0,
+      "modelCount": 0,
+      "topSlug": null,
+      "topFavorites": 0
+    },
+    "armchairs": {
+      "id": "armchairs",
+      "name": "Кресла",
+      "subcat": "armchairs",
+      "totalFavorites": 0,
+      "modelCount": 0,
+      "topSlug": null,
+      "topFavorites": 0
+    },
+    "beds": {
+      "id": "beds",
+      "name": "Кровати",
+      "subcat": "beds",
+      "totalFavorites": 0,
+      "modelCount": 0,
+      "topSlug": null,
+      "topFavorites": 0
+    },
+    "tables": {
+      "id": "tables",
+      "name": "Столы",
+      "subcat": "tables",
+      "totalFavorites": 0,
+      "modelCount": 0,
+      "topSlug": null,
+      "topFavorites": 0
+    },
+    "chairs": {
+      "id": "chairs",
+      "name": "Стулья",
+      "subcat": "chairs",
+      "totalFavorites": 0,
+      "modelCount": 0,
+      "topSlug": null,
+      "topFavorites": 0
+    },
+    "table-chair": {
+      "id": "table-chair",
+      "name": "Стол + стул",
+      "subcat": "table-and-chair",
+      "totalFavorites": 0,
+      "modelCount": 0,
+      "topSlug": null,
+      "topFavorites": 0
+    },
+    "wardrobes": {
+      "id": "wardrobes",
+      "name": "Шкафы",
+      "subcat": "wardrobes",
+      "totalFavorites": 0,
+      "modelCount": 0,
+      "topSlug": null,
+      "topFavorites": 0
+    },
+    "shelving": {
+      "id": "shelving",
+      "name": "Стеллаж",
+      "subcat": "shelving",
+      "totalFavorites": 0,
+      "modelCount": 0,
+      "topSlug": null,
+      "topFavorites": 0
+    },
+    "cabinets": {
+      "id": "cabinets",
+      "name": "Тумбы, комоды",
+      "subcat": "cabinets-commodes",
+      "totalFavorites": 0,
+      "modelCount": 0,
+      "topSlug": null,
+      "topFavorites": 0
+    },
+    "tv-stand": {
+      "id": "tv-stand",
+      "name": "ТВ стенка",
+      "subcat": "tv-stand",
+      "totalFavorites": 0,
+      "modelCount": 0,
+      "topSlug": null,
+      "topFavorites": 0
+    },
+    "office": {
+      "id": "office",
+      "name": "Офисная мебель",
+      "subcat": "office-furniture",
+      "totalFavorites": 0,
+      "modelCount": 0,
+      "topSlug": null,
+      "topFavorites": 0
+    },
+    "hallway": {
+      "id": "hallway",
+      "name": "Прихожая",
+      "subcat": "hallway",
+      "totalFavorites": 0,
+      "modelCount": 0,
+      "topSlug": null,
+      "topFavorites": 0
+    },
+    "headboards": {
+      "id": "headboards",
+      "name": "Изголовья",
+      "subcat": "headboards",
+      "totalFavorites": 0,
+      "modelCount": 0,
+      "topSlug": null,
+      "topFavorites": 0
+    },
+    "console": {
+      "id": "console",
+      "name": "Консоль",
+      "subcat": "console",
+      "totalFavorites": 0,
+      "modelCount": 0,
+      "topSlug": null,
+      "topFavorites": 0
+    },
+    "dressing-table": {
+      "id": "dressing-table",
+      "name": "Туалетный столик",
+      "subcat": "dressing-table",
+      "totalFavorites": 0,
+      "modelCount": 0,
+      "topSlug": null,
+      "topFavorites": 0
+    },
+    "soft-other": {
+      "id": "soft-other",
+      "name": "Другая мягкая",
+      "subcat": "other-soft-furniture",
+      "totalFavorites": 0,
+      "modelCount": 0,
+      "topSlug": null,
+      "topFavorites": 0
+    },
+    "furniture-other": {
+      "id": "furniture-other",
+      "name": "Другое",
+      "subcat": "other-furniture",
+      "totalFavorites": 0,
+      "modelCount": 0,
+      "topSlug": null,
+      "topFavorites": 0
+    }
+  },
+  "models": {}
+}

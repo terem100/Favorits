@@ -1,0 +1,142 @@
+{
+  "id": "lighting",
+  "name": "Освещение",
+  "icon": "💡",
+  "updatedAt": "2026-06-17T13:22:06.546Z",
+  "totalModels": 0,
+  "totalWithFavorites": 0,
+  "topByFavorites": [],
+  "popularSlugs": [],
+  "newSlugs": [],
+  "subcats": [
+    {
+      "id": "pendant",
+      "name": "Подвесной",
+      "subcat": "pendant-lamps"
+    },
+    {
+      "id": "ceiling",
+      "name": "Потолочный",
+      "subcat": "ceiling-lamps"
+    },
+    {
+      "id": "floor-lamp",
+      "name": "Торшеры",
+      "subcat": "floor-lamps"
+    },
+    {
+      "id": "table-lamp",
+      "name": "Настольный",
+      "subcat": "table-lamps"
+    },
+    {
+      "id": "wall-lamp",
+      "name": "Бра",
+      "subcat": "wall-lamps"
+    },
+    {
+      "id": "built-in",
+      "name": "Встроенный",
+      "subcat": "built-in-lamps"
+    },
+    {
+      "id": "technical",
+      "name": "Технический",
+      "subcat": "technical-lamps"
+    },
+    {
+      "id": "street",
+      "name": "Уличный",
+      "subcat": "street-lamps"
+    },
+    {
+      "id": "neon",
+      "name": "Неон",
+      "subcat": "neon"
+    }
+  ],
+  "subcatStats": {
+    "pendant": {
+      "id": "pendant",
+      "name": "Подвесной",
+      "subcat": "pendant-lamps",
+      "totalFavorites": 0,
+      "modelCount": 0,
+      "topSlug": null,
+      "topFavorites": 0
+    },
+    "ceiling": {
+      "id": "ceiling",
+      "name": "Потолочный",
+      "subcat": "ceiling-lamps",
+      "totalFavorites": 0,
+      "modelCount": 0,
+      "topSlug": null,
+      "topFavorites": 0
+    },
+    "floor-lamp": {
+      "id": "floor-lamp",
+      "name": "Торшеры",
+      "subcat": "floor-lamps",
+      "totalFavorites": 0,
+      "modelCount": 0,
+      "topSlug": null,
+      "topFavorites": 0
+    },
+    "table-lamp": {
+      "id": "table-lamp",
+      "name": "Настольный",
+      "subcat": "table-lamps",
+      "totalFavorites": 0,
+      "modelCount": 0,
+      "topSlug": null,
+      "topFavorites": 0
+    },
+    "wall-lamp": {
+      "id": "wall-lamp",
+      "name": "Бра",
+      "subcat": "wall-lamps",
+      "totalFavorites": 0,
+      "modelCount": 0,
+      "topSlug": null,
+      "topFavorites": 0
+    },
+    "built-in": {
+      "id": "built-in",
+      "name": "Встроенный",
+      "subcat": "built-in-lamps",
+      "totalFavorites": 0,
+      "modelCount": 0,
+      "topSlug": null,
+      "topFavorites": 0
+    },
+    "technical": {
+      "id": "technical",
+      "name": "Технический",
+      "subcat": "technical-lamps",
+      "totalFavorites": 0,
+      "modelCount": 0,
+      "topSlug": null,
+      "topFavorites": 0
+    },
+    "street": {
+      "id": "street",
+      "name": "Уличный",
+      "subcat": "street-lamps",
+      "totalFavorites": 0,
+      "modelCount": 0,
+      "topSlug": null,
+      "topFavorites": 0
+    },
+    "neon": {
+      "id": "neon",
+      "name": "Неон",
+      "subcat": "neon",
+      "totalFavorites": 0,
+      "modelCount": 0,
+      "topSlug": null,
+      "topFavorites": 0
+    }
+  },
+  "models": {}
+}
