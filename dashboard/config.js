@@ -7,7 +7,7 @@ window.DASHBOARD_CONFIG = {
   // URL твоего Cloudflare Worker для проксирования картинок
   // Пример: 'https://my-worker.username.workers.dev'
   // Оставь пустым если не настроил Worker (картинки будут грузиться напрямую)
-  workerUrl: '',
+  workerUrl: 'https://small-cell-a7d7.teremok1522.workers.dev',
 
   // Разделы сайта
   sections: [
