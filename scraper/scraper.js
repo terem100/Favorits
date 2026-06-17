@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 const https = require('https');
+const zlib = require('zlib');
 const fs = require('fs');
 const path = require('path');
 
@@ -10,7 +11,7 @@ const CONFIG = {
   detailDelayJitter: 2000,
   outputDir: './dashboard/data',
   stateFile: './dashboard/data/rotation-state.json',
-  userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36',
 };
 
 const SECTIONS = [
@@ -37,18 +38,43 @@ const SECTION_GROUPS = [
   ['other'],
 ];
 
+// ─── HTTP helper с автоматическим gzip-декодированием ───────────────────────
 function req(options, body) {
   return new Promise((resolve, reject) => {
     const r = https.request(options, res => {
-      if ([301,302].includes(res.statusCode)) {
+      if ([301, 302].includes(res.statusCode)) {
         const loc = res.headers.location;
-        if (loc) return req({...options, hostname:'3ddd.ru', path: loc.startsWith('http') ? new URL(loc).pathname : loc, method: options.method}, body).then(resolve).catch(reject);
+        if (loc) {
+          return req(
+            { ...options, hostname: '3ddd.ru', path: loc.startsWith('http') ? new URL(loc).pathname : loc, method: options.method },
+            body
+          ).then(resolve).catch(reject);
+        }
       }
-      let data = '';
-      res.setEncoding('utf8');
-      res.on('data', c => data += c);
-      res.on('end', () => resolve({ status: res.statusCode, body: data, headers: res.headers }));
+
+      const chunks = [];
+      res.on('data', chunk => chunks.push(chunk));
+      res.on('end', () => {
+        const raw = Buffer.concat(chunks);
+        const encoding = res.headers['content-encoding'] || '';
+
+        const decode = (buf) => {
+          if (encoding === 'gzip') {
+            return new Promise((res, rej) => zlib.gunzip(buf, (e, d) => e ? rej(e) : res(d.toString('utf8'))));
+          } else if (encoding === 'br') {
+            return new Promise((res, rej) => zlib.brotliDecompress(buf, (e, d) => e ? rej(e) : res(d.toString('utf8'))));
+          } else if (encoding === 'deflate') {
+            return new Promise((res, rej) => zlib.inflate(buf, (e, d) => e ? rej(e) : res(d.toString('utf8'))));
+          }
+          return Promise.resolve(buf.toString('utf8'));
+        };
+
+        decode(raw)
+          .then(text => resolve({ status: res.statusCode, body: text, headers: res.headers }))
+          .catch(reject);
+      });
     });
+
     r.on('error', reject);
     r.setTimeout(20000, () => { r.destroy(); reject(new Error('Timeout')); });
     if (body) r.write(body);
@@ -60,21 +86,23 @@ function delay(ms, jitter = 0) {
   return new Promise(r => setTimeout(r, ms + Math.floor(Math.random() * jitter)));
 }
 
-// Получаем список моделей через страницу каталога с sitemaps
-async function fetchModelsViaSearch(cat, subcats, page, order) {
-  // Сразу используем JSON API
+// ─── Каталог моделей через JSON API ─────────────────────────────────────────
+async function fetchModelsViaSearch(cat, subcats, page) {
   try {
-    const modelsBody = JSON.stringify({ categories: subcats, page });
+    const payload = { categories: subcats };
+    const modelsBody = JSON.stringify(payload);
+
     const refererUrl = subcats.length > 0
-      ? `https://3ddd.ru/3dmodels?cat=${cat}&${subcats.map(s=>`subcat=${s}`).join('&')}&page=${page}`
+      ? `https://3ddd.ru/3dmodels?cat=${cat}&${subcats.map(s => `subcat=${s}`).join('&')}&page=${page}`
       : `https://3ddd.ru/3dmodels?cat=${cat}&page=${page}`;
 
     const { status, body: resp } = await req({
       hostname: '3ddd.ru',
-      path: '/api/models',
+      path: `/api/models?page=${page}`,   // <-- page через query, не в body
       method: 'POST',
       headers: {
         'accept': 'application/json, text/plain, */*',
+        'accept-encoding': 'gzip, deflate, br',
         'content-type': 'application/json',
         'content-length': Buffer.byteLength(modelsBody),
         'referer': refererUrl,
@@ -84,6 +112,9 @@ async function fetchModelsViaSearch(cat, subcats, page, order) {
         'cache-control': 'no-cache',
         'pragma': 'no-cache',
         'expires': 'Sat, 01 Jan 2000 00:00:00 GMT',
+        'sec-fetch-dest': 'empty',
+        'sec-fetch-mode': 'cors',
+        'sec-fetch-site': 'same-origin',
       },
     }, modelsBody);
 
@@ -91,17 +122,16 @@ async function fetchModelsViaSearch(cat, subcats, page, order) {
 
     if (status === 200) {
       const json = JSON.parse(resp);
-      if (json.data?.models?.length) {
-        return json.data;
-      }
-      console.log(`    ⚠️ Моделей нет (total: ${json.data?.total_value}, hash: ${json.data?.search_hash})`);
+      if (json.data?.models?.length) return json.data;
+      console.log(`    ⚠️ Моделей нет (total: ${json.data?.total_value})`);
+    } else {
+      console.log(`    ⚠️ Ответ: ${resp.slice(0, 200)}`);
     }
-  } catch(e) {
+  } catch (e) {
     console.log(`    ❌ API ошибка: ${e.message}`);
   }
   return null;
 }
-
 
 function parseModelFromApi(m) {
   const img = m.images?.[0];
@@ -121,51 +151,50 @@ function parseModelFromApi(m) {
   };
 }
 
+// ─── Парсинг счётчика избранного из HTML ─────────────────────────────────────
+// Сайт рендерит Angular SSR, HTML содержит:
+// <div _ngcontent-ng-c...="" class="added-to-collections ng-tns-... ng-star-inserted"> 11 </div>
 function parseFavoritesFromHtml(html) {
-  const m = html.match(/class="[^"]*added-to-collections[^"]*"[^>]*>\s*(\d+)\s*</i);
+  // Надёжный поиск: ищем класс added-to-collections, атрибуты в любом порядке
+  const m = html.match(/<[^>]+class="[^"]*added-to-collections[^"]*"[^>]*>\s*(\d+)\s*<\//i);
   return m ? parseInt(m[1]) : null;
 }
 
 async function fetchAllModels(section) {
   const allModels = {};
+  let page = 1;
+  console.log(`\n  📋 ${section.name}`);
 
-  for (const order of ['date_desc', 'sell_rating']) {
-    console.log(`\n  📋 ${section.name} / ${order}`);
-    let page = 1;
+  while (page <= CONFIG.catalogPages) {
+    const data = await fetchModelsViaSearch(section.cat, section.subcategories || [], page);
+    if (!data || !data.models?.length) break;
 
-    while (page <= CONFIG.catalogPages) {
-      const data = await fetchModelsViaSearch(section.cat, section.subcategories || [], page, order);
-
-      if (!data || !data.models?.length) break;
-
-      for (const m of data.models) {
-        const slug = m.slug;
-        if (!allModels[slug]) {
-          allModels[slug] = m.fromHtml
-            ? { slug, url: `https://3ddd.ru/3dmodels/show/${slug}`, name: slug, preview: null, price: 0, isPro: false, isFree: true, favorites: null }
-            : parseModelFromApi(m);
-        }
+    for (const m of data.models) {
+      const slug = m.slug;
+      if (!allModels[slug]) {
+        allModels[slug] = parseModelFromApi(m);
       }
-
-      const total = data.total_value || 0;
-      const perPage = data.per_page || 60;
-      const totalPages = Math.ceil(total / perPage);
-      console.log(`    Стр.${page}/${Math.min(totalPages || page, CONFIG.catalogPages)}: итого ${Object.keys(allModels).length}`);
-
-      if (page >= (totalPages || 1)) break;
-      page++;
-      await delay(CONFIG.catalogDelayMs, 1000);
     }
+
+    const total = data.total_value || 0;
+    const perPage = data.per_page || 60;
+    const totalPages = Math.ceil(total / perPage);
+    console.log(`    Стр.${page}/${Math.min(totalPages || page, CONFIG.catalogPages)}: итого ${Object.keys(allModels).length}`);
+
+    if (page >= (totalPages || 1)) break;
+    page++;
+    await delay(CONFIG.catalogDelayMs, 1000);
   }
 
   return allModels;
 }
 
+// ─── Получение избранного через HTML страницы модели ─────────────────────────
 async function enrichFavorites(allModels, existingModels) {
   const slugs = Object.keys(allModels);
   if (!slugs.length) return;
   console.log(`\n  ❤️  Получаем избранное для ${slugs.length} моделей...`);
-  let done = 0, errors = 0;
+  let done = 0, errors = 0, found = 0;
 
   for (const slug of slugs) {
     const model = allModels[slug];
@@ -177,12 +206,34 @@ async function enrichFavorites(allModels, existingModels) {
         hostname: '3ddd.ru',
         path: `/3dmodels/show/${slug}`,
         method: 'GET',
-        headers: { 'User-Agent': CONFIG.userAgent, 'Accept': 'text/html', 'Referer': 'https://3ddd.ru/3dmodels' },
+        headers: {
+          'user-agent': CONFIG.userAgent,
+          'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'accept-encoding': 'gzip, deflate, br',   // <-- ключевое исправление
+          'accept-language': 'ru-RU,ru;q=0.9,en-US;q=0.8',
+          'referer': 'https://3ddd.ru/3dmodels',
+          'sec-fetch-dest': 'document',
+          'sec-fetch-mode': 'navigate',
+          'sec-fetch-site': 'same-origin',
+          'cookie': 'besrv=app180',
+        },
       });
+
       if (status === 200) {
         const fav = parseFavoritesFromHtml(body);
-        if (fav != null) model.favorites = fav;
-        // Название из og:title если нет
+        if (fav != null) {
+          model.favorites = fav;
+          found++;
+        } else {
+          // Отладка: логируем первый неудачный случай
+          if (found === 0 && done === 0) {
+            const snippet = body.match(/added-to-collections[\s\S]{0,200}/i);
+            console.log(`    🔍 Отладка HTML (первая модель ${slug}):`);
+            console.log(`       Длина тела: ${body.length}`);
+            console.log(`       Фрагмент: ${snippet ? snippet[0].slice(0, 150) : 'класс не найден в HTML'}`);
+          }
+        }
+
         if (!model.name || model.name === slug) {
           const t = body.match(/property="og:title"\s+content="([^"]+)"/i);
           if (t) model.name = t[1].replace(/\s*-.*$/, '').trim();
@@ -194,11 +245,14 @@ async function enrichFavorites(allModels, existingModels) {
         model.scannedAt = new Date().toISOString();
       }
       done++;
-    } catch { errors++; }
+    } catch (e) {
+      errors++;
+    }
 
+    // Сохраняем историю избранного
     if (model.favorites != null) {
       const prev = existing?.favoritesHistory || [];
-      const lastVal = prev.length ? prev[prev.length-1].value : null;
+      const lastVal = prev.length ? prev[prev.length - 1].value : null;
       model.favoritesHistory = lastVal !== model.favorites
         ? [...prev, { date: new Date().toISOString(), value: model.favorites }]
         : prev;
@@ -206,14 +260,16 @@ async function enrichFavorites(allModels, existingModels) {
       model.favoritesHistory = existing.favoritesHistory;
     }
 
-    if ((done+errors) % 50 === 0) console.log(`    ${done}/${slugs.length} готово`);
+    if ((done + errors) % 50 === 0) {
+      console.log(`    ${done}/${slugs.length} готово, ❤️ найдено: ${found}`);
+    }
     await delay(CONFIG.detailDelayMs, CONFIG.detailDelayJitter);
   }
-  console.log(`  ✓ ${done} обновлено, ${errors} ошибок`);
+  console.log(`  ✓ ${done} обновлено, ❤️ найдено: ${found}, ошибок: ${errors}`);
 }
 
 function loadExisting(p) {
-  try { return fs.existsSync(p) ? JSON.parse(fs.readFileSync(p,'utf8')) : null; } catch { return null; }
+  try { return fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, 'utf8')) : null; } catch { return null; }
 }
 
 async function processSection(section) {
@@ -222,6 +278,8 @@ async function processSection(section) {
   const existing = loadExisting(filePath);
 
   const allModels = await fetchAllModels(section);
+
+  // Подтягиваем старые модели которые не попали в текущий скан
   if (existing?.models) {
     for (const [slug, m] of Object.entries(existing.models)) {
       if (!allModels[slug]) allModels[slug] = m;
@@ -233,24 +291,33 @@ async function processSection(section) {
 
   const topByFavorites = Object.values(allModels)
     .filter(m => m.favorites != null)
-    .sort((a,b) => b.favorites - a.favorites)
+    .sort((a, b) => b.favorites - a.favorites)
     .map(m => m.slug);
 
   const subcatStats = {};
   for (const m of Object.values(allModels)) {
     if (!m.subcat) continue;
-    if (!subcatStats[m.subcat]) subcatStats[m.subcat] = { id: m.subcat, name: m.subcatName||m.subcat, totalFavorites:0, modelCount:0, topFavorites:0, topSlug:null };
+    if (!subcatStats[m.subcat]) subcatStats[m.subcat] = { id: m.subcat, name: m.subcatName || m.subcat, totalFavorites: 0, modelCount: 0, topFavorites: 0, topSlug: null };
     subcatStats[m.subcat].modelCount++;
     if (m.favorites) {
       subcatStats[m.subcat].totalFavorites += m.favorites;
-      if (m.favorites > subcatStats[m.subcat].topFavorites) { subcatStats[m.subcat].topFavorites = m.favorites; subcatStats[m.subcat].topSlug = m.slug; }
+      if (m.favorites > subcatStats[m.subcat].topFavorites) {
+        subcatStats[m.subcat].topFavorites = m.favorites;
+        subcatStats[m.subcat].topSlug = m.slug;
+      }
     }
   }
 
-  const output = { id:section.id, name:section.name, icon:section.icon, updatedAt:new Date().toISOString(), totalModels:Object.keys(allModels).length, totalWithFavorites:topByFavorites.length, topByFavorites, subcatStats, models:allModels };
+  const output = {
+    id: section.id, name: section.name, icon: section.icon,
+    updatedAt: new Date().toISOString(),
+    totalModels: Object.keys(allModels).length,
+    totalWithFavorites: topByFavorites.length,
+    topByFavorites, subcatStats, models: allModels,
+  };
   fs.writeFileSync(filePath, JSON.stringify(output, null, 2));
   const top = allModels[topByFavorites[0]];
-  console.log(`  💾 Сохранено: ${output.totalModels} моделей`);
+  console.log(`  💾 Сохранено: ${output.totalModels} моделей, ${output.totalWithFavorites} с избранным`);
   if (top) console.log(`  🏆 Топ: "${top.name}" — ${top.favorites} ❤️`);
 }
 
@@ -264,7 +331,7 @@ async function main() {
   const todayIds = SECTION_GROUPS[groupIndex];
   const todaySections = SECTIONS.filter(s => todayIds.includes(s.id));
 
-  console.log(`\n🔄 Группа ${groupIndex+1}/${SECTION_GROUPS.length}: ${todaySections.map(s=>s.name).join(', ')}`);
+  console.log(`\n🔄 Группа ${groupIndex + 1}/${SECTION_GROUPS.length}: ${todaySections.map(s => s.name).join(', ')}`);
 
   for (const section of todaySections) await processSection(section);
 
@@ -275,11 +342,30 @@ async function main() {
     const d = loadExisting(path.join(CONFIG.outputDir, `${s.id}.json`));
     if (!d) continue;
     const top = d.topByFavorites?.map(sl => d.models[sl]).find(m => m?.favorites != null);
-    sections[s.id] = { name:s.name, icon:s.icon, totalModels:d.totalModels, totalFavorites:Object.values(d.models).reduce((a,m)=>a+(m.favorites||0),0), updatedAt:d.updatedAt, topModel:top?.name, topFavorites:top?.favorites };
+    sections[s.id] = {
+      name: s.name, icon: s.icon,
+      totalModels: d.totalModels,
+      totalFavorites: Object.values(d.models).reduce((a, m) => a + (m.favorites || 0), 0),
+      updatedAt: d.updatedAt,
+      topModel: top?.name,
+      topFavorites: top?.favorites,
+    };
   }
 
-  fs.writeFileSync(metaPath, JSON.stringify({ ...existingMeta, finishedAt:new Date().toISOString(), currentGroup:groupIndex, nextGroup:(groupIndex+1)%SECTION_GROUPS.length, sections_list:SECTIONS.map(s=>({id:s.id,name:s.name,icon:s.icon})), sections }, null, 2));
-  fs.writeFileSync(CONFIG.stateFile, JSON.stringify({ currentGroup:(groupIndex+1)%SECTION_GROUPS.length, lastRun:new Date().toISOString(), lastSections:todaySections.map(s=>s.name) }, null, 2));
+  fs.writeFileSync(metaPath, JSON.stringify({
+    ...existingMeta,
+    finishedAt: new Date().toISOString(),
+    currentGroup: groupIndex,
+    nextGroup: (groupIndex + 1) % SECTION_GROUPS.length,
+    sections_list: SECTIONS.map(s => ({ id: s.id, name: s.name, icon: s.icon })),
+    sections,
+  }, null, 2));
+
+  fs.writeFileSync(CONFIG.stateFile, JSON.stringify({
+    currentGroup: (groupIndex + 1) % SECTION_GROUPS.length,
+    lastRun: new Date().toISOString(),
+    lastSections: todaySections.map(s => s.name),
+  }, null, 2));
 
   console.log('\n✅ Готово!');
 }
