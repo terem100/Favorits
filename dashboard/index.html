@@ -7,9 +7,9 @@
 <script src="config.js"></script>
 <style>
 :root {
-  --bg: #0e0f14; --surface: #16181f; --card: #1c1f2b; --border: #2a2d3d;
-  --accent: #7c6af7; --accent2: #f7906a; --text: #e8eaf0; --muted: #6b7089;
-  --success: #5bc98a; --warning: #f7c56a; --danger: #f76a6a;
+  --bg: #111318; --surface: #1a1d24; --card: #22262f; --border: #2e3340;
+  --accent: #5b8dee; --accent2: #ff8c42; --text: #f0f2f8; --muted: #9ba3b8;
+  --success: #3ecf7a; --warning: #f5c842; --danger: #f0534a;
   --radius: 12px; --font: 'Inter', system-ui, sans-serif;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -35,7 +35,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); min-
   color: var(--muted); transition: all 0.15s; user-select: none;
 }
 .nav-item:hover { background: var(--card); color: var(--text); }
-.nav-item.active { background: rgba(124,106,247,0.15); color: var(--accent); font-weight: 500; }
+.nav-item.active { background: rgba(91,141,238,0.18); color: var(--accent); font-weight: 500; }
 .nav-item .icon { font-size: 15px; width: 18px; text-align: center; flex-shrink: 0; }
 .nav-item .badge { margin-left: auto; background: var(--border); border-radius: 20px; padding: 1px 7px; font-size: 11px; color: var(--muted); }
 .nav-item.subcat { padding-left: 36px; font-size: 12px; }
@@ -80,13 +80,13 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); min-
   background: var(--card); color: var(--muted); font-size: 12px; cursor: pointer;
   transition: all 0.15s; font-family: var(--font);
 }
-.period-btn.active { background: rgba(124,106,247,0.15); border-color: var(--accent); color: var(--accent); }
+.period-btn.active { background: rgba(91,141,238,0.18); border-color: var(--accent); color: var(--accent); }
 .type-btn {
   padding: 5px 13px; border-radius: 20px; border: 1px solid var(--border);
   background: var(--card); color: var(--muted); font-size: 12px; cursor: pointer;
   transition: all 0.15s; font-family: var(--font); margin-left: 12px;
 }
-.type-btn.active { background: rgba(247,144,106,0.15); border-color: var(--accent2); color: var(--accent2); }
+.type-btn.active { background: rgba(255,140,66,0.18); border-color: var(--accent2); color: var(--accent2); }
 .sort-sel {
   margin-left: auto; padding: 5px 10px; background: var(--card); border: 1px solid var(--border);
   border-radius: 8px; color: var(--text); font-size: 12px; font-family: var(--font); cursor: pointer; outline: none;
@@ -126,7 +126,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); min-
   background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
   overflow: hidden; transition: all 0.15s; cursor: pointer;
 }
-.model-card:hover { transform: translateY(-2px); border-color: var(--accent); box-shadow: 0 8px 24px rgba(124,106,247,0.12); }
+.model-card:hover { transform: translateY(-2px); border-color: var(--accent); box-shadow: 0 8px 24px rgba(91,141,238,0.18); }
 
 .card-thumb { aspect-ratio: 4/3; background: var(--surface); position: relative; overflow: hidden; }
 .card-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; opacity: 0; transition: opacity 0.3s; }
@@ -134,13 +134,13 @@ body { background: var(--bg); color: var(--text); font-family: var(--font); min-
 .card-thumb .no-img { display: flex; align-items: center; justify-content: center; height: 100%; color: var(--muted); font-size: 28px; }
 
 .badge { position: absolute; top: 7px; right: 7px; padding: 2px 7px; border-radius: 5px; font-size: 10px; font-weight: 700; }
-.badge.pro { background: rgba(247,144,106,0.9); color: white; }
-.badge.free { background: rgba(91,201,138,0.9); color: white; }
+.badge.pro { background: rgba(255,140,66,0.95); color: white; }
+.badge.free { background: rgba(62,207,122,0.95); color: white; }
 .rank-num { position: absolute; top: 7px; left: 7px; width: 24px; height: 24px; border-radius: 50%; background: rgba(0,0,0,0.75); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: var(--warning); }
 
 /* Trend badge */
-.trend-up { position: absolute; bottom: 7px; left: 7px; background: rgba(91,201,138,0.9); color: white; padding: 2px 7px; border-radius: 5px; font-size: 11px; font-weight: 600; }
-.trend-hot { background: rgba(247,144,106,0.9); }
+.trend-up { position: absolute; bottom: 7px; left: 7px; background: rgba(62,207,122,0.95); color: white; padding: 2px 7px; border-radius: 5px; font-size: 11px; font-weight: 600; }
+.trend-hot { background: rgba(255,140,66,0.95); }
 
 .card-body { padding: 10px 12px; }
 .card-name { font-size: 12.5px; font-weight: 500; line-height: 1.4; margin-bottom: 8px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
