@@ -14,19 +14,19 @@ const CONFIG = {
 };
 
 const SECTIONS = [
-  { id: 'furniture',  name: 'Мебель',        cat: 'furniture',            icon: '🛋️' },
-  { id: 'lighting',   name: 'Освещение',      cat: 'light',                icon: '💡' },
-  { id: 'decor',      name: 'Декор',          cat: 'decor',                icon: '🖼️' },
-  { id: 'bathroom',   name: 'Санузел',        cat: 'bathroom',             icon: '🚿' },
-  { id: 'kitchen',    name: 'Кухня',          cat: 'kitchen',              icon: '🍳' },
-  { id: 'plants',     name: 'Растения',       cat: 'plants',               icon: '🌿' },
-  { id: 'tech',       name: 'Техника',        cat: 'tech',                 icon: '📱' },
-  { id: 'exterior',   name: 'Экстерьер',      cat: 'exterior',             icon: '🏠' },
-  { id: 'children',   name: 'Детская',        cat: 'children',             icon: '🧸' },
-  { id: 'transport',  name: 'Транспорт',      cat: 'transport',            icon: '🚗' },
-  { id: 'materials',  name: 'Материалы',      cat: 'materials',            icon: '🎨' },
-  { id: 'textures',   name: 'Текстуры',       cat: 'textures',             icon: '🖼️' },
-  { id: 'other',      name: 'Другие модели',  cat: 'miscellaneous-models', icon: '📦' },
+  { id: 'furniture', name: 'Мебель', cat: 'furniture', icon: '🛋️', subcategories: ['armchairs','beds','chairs','consoles','dressing-tables','hallway-furniture','headboards','miscellaneous-furniture','miscellaneous-soft-seating','office-furniture','racks','sideboards-and-chests-of-drawers','sofas','tables','tables-and-chairs','tv-walls','wardrobes-and-display-cabinets'] },
+  { id: 'lighting',  name: 'Освещение', cat: 'light', icon: '💡', subcategories: ['built-in-lamps','ceiling-lamps','floor-lamps','neon','pendant-lamps','street-lamps','table-lamps','technical-lamps','wall-lamps'] },
+  { id: 'decor',     name: 'Декор', cat: 'decor', icon: '🖼️', subcategories: ['3d-panels','books','carpets','clocks','clothes-and-shoes','curtains','decorative-set','frames','interior-objects','mirrors','molding','pillows','sculptures','vases'] },
+  { id: 'bathroom',  name: 'Санузел', cat: 'bathroom', icon: '🚿', subcategories: ['bath-decor','bath-faucets','bathtubs','bathroom-furniture','shower-cabins','towel-rails','wash-basins','wc-and-bidet'] },
+  { id: 'kitchen',   name: 'Кухня', cat: 'kitchen', icon: '🍳', subcategories: ['dishes','food-and-drinks','kitchen-appliances','kitchen-faucets','kitchen-furniture','kitchen-sinks','kitchen-stuff'] },
+  { id: 'plants',    name: 'Растения', cat: 'plants', icon: '🌿', subcategories: ['bouquets','bushes','grass','indoor-plants','outdoor-plants','phytowalls','trees'] },
+  { id: 'tech',      name: 'Техника', cat: 'tech', icon: '📱', subcategories: ['audio','computers-and-electronics','home-appliances','phones','tech-other','tv'] },
+  { id: 'exterior',  name: 'Экстерьер', cat: 'exterior', icon: '🏠', subcategories: ['barbecue-and-grill','buildings','exterior-other','facade-elements','fencing','nature-details','pavement','playground','urban-environment'] },
+  { id: 'children',  name: 'Детская', cat: 'children', icon: '🧸', subcategories: ['children-beds','children-items','children-tables-and-chairs','children-wardrobes','other-children-items','toys'] },
+  { id: 'transport', name: 'Транспорт', cat: 'transport', icon: '🚗', subcategories: ['air-transport','land-transport','water-transport'] },
+  { id: 'materials', name: 'Материалы', cat: 'materials', icon: '🎨', subcategories: ['fabric-materials','glass-materials','leather-materials','liquid-materials','metal-materials','miscellaneous-materials','plastic-materials','stone-materials','tile-materials','wood-materials'] },
+  { id: 'textures',  name: 'Текстуры', cat: 'textures', icon: '🖼️', subcategories: ['brick-textures','carpet-textures','fabric-textures','floor-textures','hdri','leather-textures','metal-textures','miscellaneous-textures','organic-textures','panoramic','stone-textures','tile-textures','wall-textures','wood-textures'] },
+  { id: 'other',     name: 'Другие модели', cat: 'miscellaneous-models', icon: '📦', subcategories: ['beauty-salon','billiards','doors','fireplaces','living-creatures','miscellaneous-objects','musical-instruments','radiators','restaurant','shop','sport','stairs','weapons','windows'] },
 ];
 
 const SECTION_GROUPS = [
@@ -61,7 +61,7 @@ function delay(ms, jitter = 0) {
 }
 
 // Получаем список моделей через страницу каталога с sitemaps
-async function fetchModelsViaSearch(cat, page, order) {
+async function fetchModelsViaSearch(cat, subcats, page, order) {
   // Пробуем несколько вариантов URL
   const urls = [
     `/3dmodels?cat=${cat}&order=${order}&page=${page}`,
@@ -114,31 +114,10 @@ async function fetchModelsViaSearch(cat, page, order) {
     }
   }
 
-  // API: сначала устанавливаем фильтр, потом запрашиваем страницу
+  // API: передаём categories + page в теле запроса
   try {
-    // Шаг 1: установить фильтр (категория + сортировка + страница)
-    const filterBody = JSON.stringify({ cat, order, page });
-    const filterResp = await req({
-      hostname: '3ddd.ru',
-      path: '/api/filter_models',
-      method: 'POST',
-      headers: {
-        'accept': 'application/json, text/plain, */*',
-        'content-type': 'application/json',
-        'content-length': Buffer.byteLength(filterBody),
-        'referer': `https://3ddd.ru/3dmodels?cat=${cat}&order=${order}&page=${page}`,
-        'user-agent': CONFIG.userAgent,
-        'origin': 'https://3ddd.ru',
-        'cookie': `besrv=app180`,
-      },
-    }, filterBody);
-
-    // Берём куки из ответа filter_models
-    const setCookie = filterResp.headers['set-cookie'] || '';
-    const sessionCookie = `besrv=app180; ${setCookie}`.replace(/\n/g, '; ');
-
-    // Шаг 2: получить модели с учётом фильтра
-    const modelsBody = JSON.stringify({});
+    const modelsBody = JSON.stringify({ categories: subcats, page });
+    const refererUrl = `https://3ddd.ru/3dmodels?cat=${cat}&${subcats.map(s=>`subcat=${s}`).join('&')}&page=${page}`;
     const { status, body: resp } = await req({
       hostname: '3ddd.ru',
       path: '/api/models',
@@ -147,10 +126,13 @@ async function fetchModelsViaSearch(cat, page, order) {
         'accept': 'application/json, text/plain, */*',
         'content-type': 'application/json',
         'content-length': Buffer.byteLength(modelsBody),
-        'referer': `https://3ddd.ru/3dmodels?cat=${cat}&order=${order}&page=${page}`,
+        'referer': refererUrl,
         'user-agent': CONFIG.userAgent,
         'origin': 'https://3ddd.ru',
-        'cookie': sessionCookie,
+        'cookie': 'besrv=app180',
+        'cache-control': 'no-cache',
+        'pragma': 'no-cache',
+        'expires': 'Sat, 01 Jan 2000 00:00:00 GMT',
       },
     }, modelsBody);
 
@@ -196,7 +178,7 @@ async function fetchAllModels(section) {
     let page = 1;
 
     while (page <= CONFIG.catalogPages) {
-      const data = await fetchModelsViaSearch(section.cat, page, order);
+      const data = await fetchModelsViaSearch(section.cat, section.subcategories || [], page, order);
 
       if (!data || !data.models?.length) break;
 
