@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3ddd Tracker — Аналитика спроса</title>
+<script src="config.js"></script>
+<style>
+:root {
+  --bg: #0e0f14; --surface: #16181f; --card: #1c1f2b; --border: #2a2d3d;
+  --accent: #7c6af7; --accent2: #f7906a; --text: #e8eaf0; --muted: #6b7089;
+  --success: #5bc98a; --warning: #f7c56a; --danger: #f76a6a;
+  --radius: 12px; --font: 'Inter', system-ui, sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: var(--font); min-height: 100vh; }
+
+/* Layout */
+.layout { display: flex; min-height: 100vh; }
+
+/* Sidebar */
+.sidebar {
+  width: 250px; flex-shrink: 0; background: var(--surface);
+  border-right: 1px solid var(--border); display: flex; flex-direction: column;
+  position: sticky; top: 0; height: 100vh; overflow-y: auto;
+}
+.logo { padding: 22px 20px 18px; border-bottom: 1px solid var(--border); }
+.logo h1 { font-size: 17px; font-weight: 700; color: var(--accent); letter-spacing: -0.3px; }
+.logo p { font-size: 11px; color: var(--muted); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+.nav-group { padding: 14px 12px 6px; font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
+.nav-item {
+  display: flex; align-items: center; gap: 9px; padding: 8px 14px;
+  margin: 1px 8px; border-radius: 8px; cursor: pointer; font-size: 13px;
+  color: var(--muted); transition: all 0.15s; user-select: none;
+}
+.nav-item:hover { background: var(--card); color: var(--text); }
+.nav-item.active { background: rgba(124,106,247,0.15); color: var(--accent); font-weight: 500; }
+.nav-item .icon { font-size: 15px; width: 18px; text-align: center; flex-shrink: 0; }
+.nav-item .badge { margin-left: auto; background: var(--border); border-radius: 20px; padding: 1px 7px; font-size: 11px; color: var(--muted); }
+.nav-item.subcat { padding-left: 36px; font-size: 12px; }
+
+.sidebar-footer { margin-top: auto; padding: 14px 16px; border-top: 1px solid var(--border); font-size: 11px; color: var(--muted); }
+.dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); display: inline-block; margin-right: 6px; }
+
+/* Main */
+.main { flex: 1; min-width: 0; }
+
+/* Header */
+.header {
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  padding: 14px 24px; display: flex; align-items: center; gap: 12px;
+  position: sticky; top: 0; z-index: 10; flex-wrap: wrap;
+}
+.section-title { font-size: 17px; font-weight: 600; flex: 1; min-width: 150px; }
+
+.tabs { display: flex; background: var(--card); border-radius: 8px; padding: 3px; gap: 2px; }
+.tab {
+  padding: 6px 13px; border-radius: 6px; font-size: 12.5px; cursor: pointer;
+  color: var(--muted); transition: all 0.15s; border: none; background: none; font-family: var(--font);
+}
+.tab.active { background: var(--accent); color: white; font-weight: 500; }
+
+.search-box {
+  background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+  padding: 7px 13px; color: var(--text); font-size: 13px; font-family: var(--font);
+  width: 180px; outline: none; transition: border-color 0.15s;
+}
+.search-box:focus { border-color: var(--accent); }
+.search-box::placeholder { color: var(--muted); }
+
+/* Period selector */
+.period-bar {
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  padding: 10px 24px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+.period-label { font-size: 12px; color: var(--muted); margin-right: 4px; }
+.period-btn {
+  padding: 5px 13px; border-radius: 20px; border: 1px solid var(--border);
+  background: var(--card); color: var(--muted); font-size: 12px; cursor: pointer;
+  transition: all 0.15s; font-family: var(--font);
+}
+.period-btn.active { background: rgba(124,106,247,0.15); border-color: var(--accent); color: var(--accent); }
+.type-btn {
+  padding: 5px 13px; border-radius: 20px; border: 1px solid var(--border);
+  background: var(--card); color: var(--muted); font-size: 12px; cursor: pointer;
+  transition: all 0.15s; font-family: var(--font); margin-left: 12px;
+}
+.type-btn.active { background: rgba(247,144,106,0.15); border-color: var(--accent2); color: var(--accent2); }
+.sort-sel {
+  margin-left: auto; padding: 5px 10px; background: var(--card); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--text); font-size: 12px; font-family: var(--font); cursor: pointer; outline: none;
+}
+
+/* Stats */
+.stats-bar { display: flex; gap: 1px; background: var(--border); border-bottom: 1px solid var(--border); }
+.stat { flex: 1; padding: 12px 18px; background: var(--surface); }
+.stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+.stat-value { font-size: 20px; font-weight: 700; margin-top: 2px; }
+.c-accent { color: var(--accent); } .c-accent2 { color: var(--accent2); } .c-success { color: var(--success); } .c-warning { color: var(--warning); }
+
+/* Content */
+.content { padding: 20px 24px; }
+
+/* Section ranking */
+.ranking-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; margin-bottom: 24px; }
+.rank-card {
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 16px; cursor: pointer; transition: all 0.15s;
+}
+.rank-card:hover { border-color: var(--accent); transform: translateY(-1px); }
+.rank-card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.rank-icon { font-size: 22px; }
+.rank-name { font-size: 15px; font-weight: 600; }
+.rank-pos { margin-left: auto; font-size: 22px; font-weight: 800; color: var(--warning); opacity: 0.6; }
+.rank-bar-wrap { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; margin-bottom: 10px; }
+.rank-bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 3px; transition: width 0.8s ease; }
+.rank-meta { display: flex; gap: 16px; }
+.rank-meta-item { font-size: 12px; color: var(--muted); }
+.rank-meta-item span { color: var(--text); font-weight: 500; }
+
+/* Models grid */
+.models-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 14px; }
+
+.model-card {
+  background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+  overflow: hidden; transition: all 0.15s; cursor: pointer;
+}
+.model-card:hover { transform: translateY(-2px); border-color: var(--accent); box-shadow: 0 8px 24px rgba(124,106,247,0.12); }
+
+.card-thumb { aspect-ratio: 4/3; background: var(--surface); position: relative; overflow: hidden; }
+.card-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; opacity: 0; transition: opacity 0.3s; }
+.card-thumb img.loaded { opacity: 1; }
+.card-thumb .no-img { display: flex; align-items: center; justify-content: center; height: 100%; color: var(--muted); font-size: 28px; }
+
+.badge { position: absolute; top: 7px; right: 7px; padding: 2px 7px; border-radius: 5px; font-size: 10px; font-weight: 700; }
+.badge.pro { background: rgba(247,144,106,0.9); color: white; }
+.badge.free { background: rgba(91,201,138,0.9); color: white; }
+.rank-num { position: absolute; top: 7px; left: 7px; width: 24px; height: 24px; border-radius: 50%; background: rgba(0,0,0,0.75); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: var(--warning); }
+
+/* Trend badge */
+.trend-up { position: absolute; bottom: 7px; left: 7px; background: rgba(91,201,138,0.9); color: white; padding: 2px 7px; border-radius: 5px; font-size: 11px; font-weight: 600; }
+.trend-hot { background: rgba(247,144,106,0.9); }
+
+.card-body { padding: 10px 12px; }
+.card-name { font-size: 12.5px; font-weight: 500; line-height: 1.4; margin-bottom: 8px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.card-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.meta-chip { display: flex; align-items: center; gap: 3px; font-size: 11.5px; color: var(--muted); }
+.meta-chip.hi { color: var(--accent2); font-weight: 600; }
+.meta-chip.growth { color: var(--success); font-weight: 600; }
+
+.card-footer { padding: 7px 12px; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.price { font-size: 12px; font-weight: 600; color: var(--accent2); }
+.price.free { color: var(--success); }
+.open-link { font-size: 11px; color: var(--muted); text-decoration: none; }
+.open-link:hover { color: var(--accent); }
+
+/* Subcats table */
+.subcats-table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+.subcats-table th { text-align: left; padding: 10px 14px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); }
+.subcats-table td { padding: 10px 14px; font-size: 13px; border-bottom: 1px solid var(--border); }
+.subcats-table tr:hover td { background: var(--card); cursor: pointer; }
+.subcat-bar { height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; width: 100px; }
+.subcat-bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 3px; }
+
+/* Chart */
+.chart-section { margin-bottom: 22px; }
+.chart-title { font-size: 12px; font-weight: 600; margin-bottom: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+.bar-row { display: flex; align-items: center; gap: 8px; font-size: 12px; margin-bottom: 6px; }
+.bar-label { width: 150px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text); }
+.bar-track { flex: 1; height: 7px; background: var(--border); border-radius: 4px; overflow: hidden; }
+.bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 4px; transition: width 0.6s; }
+.bar-val { width: 55px; text-align: right; color: var(--muted); flex-shrink: 0; }
+
+/* Pagination */
+.pagination { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 24px 0; flex-wrap: wrap; }
+.page-btn { padding: 6px 13px; border-radius: 7px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-size: 12.5px; cursor: pointer; font-family: var(--font); transition: all 0.15s; }
+.page-btn:hover { border-color: var(--accent); color: var(--accent); }
+.page-btn.active { background: var(--accent); border-color: var(--accent); color: white; }
+.page-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+/* State boxes */
+.state-box { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 70px 20px; text-align: center; color: var(--muted); gap: 14px; }
+.state-box .big { font-size: 44px; }
+.state-box h2 { font-size: 17px; color: var(--text); }
+.state-box p { font-size: 13px; max-width: 360px; line-height: 1.6; }
+.spinner { width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Section divider */
+.section-divider { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; font-weight: 600; margin: 20px 0 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<!-- Sidebar -->
+<aside class="sidebar">
+  <div class="logo">
+    <h1>3ddd Tracker</h1>
+    <p>Аналитика спроса</p>
+  </div>
+
+  <div class="nav-group">Обзор</div>
+  <div class="nav-item active" data-view="all" onclick="setView('all')">
+    <span class="icon">📊</span> Все разделы
+    <span class="badge" id="badge-all">—</span>
+  </div>
+  <div class="nav-item" data-view="ranking" onclick="setView('ranking')">
+    <span class="icon">🏆</span> Рейтинг разделов
+  </div>
+  <div class="nav-item" data-view="subcats" onclick="setView('subcats')">
+    <span class="icon">📂</span> Рейтинг подразделов
+  </div>
+
+  <div class="nav-group">Разделы</div>
+  <div id="nav-sections"></div>
+
+  <div class="sidebar-footer">
+    <span class="dot"></span>
+    <span id="last-update">Загрузка...</span>
+  </div>
+</aside>
+
+<!-- Main -->
+<div class="main">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="section-title" id="section-title">Все разделы</div>
+    <div class="tabs" id="mode-tabs">
+      <button class="tab active" onclick="setMode('top')">❤️ Топ всех времён</button>
+      <button class="tab" onclick="setMode('growth')">📈 Прирост</button>
+      <button class="tab" onclick="setMode('new')">✨ Новые</button>
+    </div>
+    <input class="search-box" type="text" placeholder="Поиск..." id="search-input" oninput="onSearch()">
+  </div>
+
+  <!-- Period bar -->
+  <div class="period-bar" id="period-bar">
+    <span class="period-label">Период:</span>
+    <button class="period-btn active" onclick="setPeriod('month')">Месяц</button>
+    <button class="period-btn" onclick="setPeriod('halfyear')">Полгода</button>
+    <button class="period-btn" onclick="setPeriod('year')">Год</button>
+    <button class="period-btn" onclick="setPeriod('all')">Всё время</button>
+    <span style="margin-left:12px; color:var(--muted); font-size:12px">Тип:</span>
+    <button class="type-btn active" onclick="setType('all')">Все</button>
+    <button class="type-btn" onclick="setType('pro')">PRO</button>
+    <button class="type-btn" onclick="setType('free')">FREE</button>
+    <select class="sort-sel" id="sort-sel" onchange="onSortChange()">
+      <option value="fav-desc">❤️ Избранное ↓</option>
+      <option value="fav-asc">❤️ Избранное ↑</option>
+      <option value="growth-desc">📈 Прирост ↓</option>
+      <option value="price-asc">💰 Цена ↑</option>
+      <option value="price-desc">💰 Цена ↓</option>
+    </select>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-bar">
+    <div class="stat"><div class="stat-label">Моделей</div><div class="stat-value c-accent" id="s-total">—</div></div>
+    <div class="stat"><div class="stat-label">Макс. избранных</div><div class="stat-value c-accent2" id="s-maxfav">—</div></div>
+    <div class="stat"><div class="stat-label">Прирост за период</div><div class="stat-value c-success" id="s-growth">—</div></div>
+    <div class="stat"><div class="stat-label">Средний прирост</div><div class="stat-value c-warning" id="s-avggrowth">—</div></div>
+  </div>
+
+  <div class="content" id="content">
+    <div class="state-box"><div class="spinner"></div><h2>Загрузка...</h2></div>
+  </div>
+
+</div>
+</div>
+
+<script>
+const CFG = window.DASHBOARD_CONFIG;
+
+const state = {
+  view: 'all',          // 'all' | 'ranking' | 'subcats' | sectionId | 'subcat:id'
+  mode: 'top',          // 'top' | 'growth' | 'new'
+  period: 'month',      // 'month' | 'halfyear' | 'year' | 'all'
+  type: 'all',          // 'all' | 'pro' | 'free'
+  sortOrder: 'fav-desc',
+  search: '',
+  page: 1,
+  perPage: 48,
+  data: {},
+  meta: null,
+  currentSectionId: null, // для подраздела
+};
+
+// ── Image proxy ──────────────────────────────────────────────────────────────
+function imgSrc(url) {
+  if (!url) return null;
+  return CFG.workerUrl ? `${CFG.workerUrl}?url=${encodeURIComponent(url)}` : url;
+}
+
+// ── Lazy images ──────────────────────────────────────────────────────────────
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (!e.isIntersecting) return;
+    const img = e.target;
+    if (img.dataset.src) {
+      img.src = img.dataset.src;
+      img.onload = () => img.classList.add('loaded');
+      img.onerror = () => img.style.display = 'none';
+      delete img.dataset.src;
+      observer.unobserve(img);
+    }
+  });
+}, { rootMargin: '200px' });
+
+// ── Period helpers ───────────────────────────────────────────────────────────
+function periodMs() {
+  const d = { month: 30, halfyear: 183, year: 365, all: 99999 };
+  return (d[state.period] || 30) * 24 * 60 * 60 * 1000;
+}
+
+function getFavoritesAtPeriodStart(model) {
+  if (!model.favoritesHistory?.length) return null;
+  const cutoff = Date.now() - periodMs();
+  // Берём последнее значение ДО начала периода
+  const before = model.favoritesHistory.filter(p => new Date(p.date).getTime() < cutoff);
+  return before.length ? before[before.length - 1].value : model.favoritesHistory[0].value;
+}
+
+function getGrowth(model) {
+  if (model.favorites == null) return null;
+  const start = getFavoritesAtPeriodStart(model);
+  if (start == null) return null;
+  return model.favorites - start;
+}
+
+// ── Data loading ─────────────────────────────────────────────────────────────
+async function loadMeta() {
+  try {
+    const r = await fetch(`${CFG.dataPath}/meta.json?t=${Date.now()}`);
+    if (!r.ok) return false;
+    state.meta = await r.json();
+    const dt = new Date(state.meta.finishedAt || state.meta.lastRun);
+    document.getElementById('last-update').textContent =
+      dt.toLocaleDateString('ru', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
+    return true;
+  } catch { return false; }
+}
+
+async function loadSection(id) {
+  if (state.data[id]) return state.data[id];
+  try {
+    const r = await fetch(`${CFG.dataPath}/${id}.json?t=${Date.now()}`);
+    if (!r.ok) return null;
+    state.data[id] = await r.json();
+    return state.data[id];
+  } catch { return null; }
+}
+
+async function loadAll() {
+  const ids = (state.meta?.sections_list || CFG.sections).map(s => s.id);
+  await Promise.all(ids.map(id => loadSection(id)));
+}
+
+// ── Build sidebar ─────────────────────────────────────────────────────────────
+function buildNav() {
+  const container = document.getElementById('nav-sections');
+  container.innerHTML = CFG.sections.map(s => `
+    <div class="nav-item" data-view="${s.id}" onclick="setView('${s.id}')">
+      <span class="icon">${s.icon}</span> ${s.name}
+      <span class="badge" id="badge-${s.id}">—</span>
+    </div>
+  `).join('');
+}
+
+function updateBadges() {
+  let total = 0;
+  for (const s of CFG.sections) {
+    const d = state.data[s.id];
+    const n = d?.totalModels || 0;
+    total += n;
+    const el = document.getElementById(`badge-${s.id}`);
+    if (el) el.textContent = n ? n.toLocaleString('ru') : '—';
+  }
+  const el = document.getElementById('badge-all');
+  if (el) el.textContent = total ? total.toLocaleString('ru') : '—';
+}
+
+// ── Navigation ────────────────────────────────────────────────────────────────
+function setView(view) {
+  state.view = view;
+  state.page = 1;
+  document.querySelectorAll('.nav-item').forEach(el =>
+    el.classList.toggle('active', el.dataset.view === view));
+
+  const titles = { all: '📊 Все разделы', ranking: '🏆 Рейтинг разделов', subcats: '📂 Рейтинг подразделов' };
+  const secCfg = CFG.sections.find(s => s.id === view);
+  document.getElementById('section-title').textContent =
+    titles[view] || (secCfg ? `${secCfg.icon} ${secCfg.name}` : view);
+
+  showLoading();
+  render();
+}
+
+function setMode(mode) {
+  state.mode = mode;
+  state.page = 1;
+  document.querySelectorAll('#mode-tabs .tab').forEach((b, i) =>
+    b.classList.toggle('active', ['top','growth','new'][i] === mode));
+  render();
+}
+
+function setPeriod(p) {
+  state.period = p;
+  state.page = 1;
+  document.querySelectorAll('.period-btn').forEach(b =>
+    b.classList.toggle('active', b.textContent.toLowerCase().includes(
+      {month:'месяц',halfyear:'полгода',year:'год',all:'всё'}[p])));
+  render();
+}
+
+function setType(t) {
+  state.type = t;
+  state.page = 1;
+  document.querySelectorAll('.type-btn').forEach(b =>
+    b.classList.toggle('active', b.textContent.toLowerCase() === {all:'все',pro:'pro',free:'free'}[t]));
+  render();
+}
+
+function onSortChange() {
+  state.sortOrder = document.getElementById('sort-sel').value;
+  state.page = 1;
+  render();
+}
+
+let searchTimer;
+function onSearch() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => { state.search = document.getElementById('search-input').value.trim(); state.page = 1; render(); }, 300);
+}
+
+function goPage(p) { state.page = p; window.scrollTo({top:0,behavior:'smooth'}); render(); }
+
+// ── Get & filter models ───────────────────────────────────────────────────────
+function getAllModels(sectionId) {
+  if (!sectionId || sectionId === 'all') {
+    return Object.values(state.data).flatMap(d => d?.models ? Object.values(d.models) : []);
+  }
+  const d = state.data[sectionId];
+  return d?.models ? Object.values(d.models) : [];
+}
+
+function getOrderedModels(sectionId) {
+  const d = sectionId && sectionId !== 'all' ? state.data[sectionId] : null;
+
+  if (state.mode === 'new') {
+    const slugs = d?.newSlugs || [];
+    return slugs.map(s => d?.models[s]).filter(Boolean);
+  }
+  if (state.mode === 'top') {
+    if (d?.topByFavorites) return d.topByFavorites.map(s => d.models[s]).filter(Boolean);
+  }
+  // growth или all
+  return getAllModels(sectionId);
+}
+
+function filterAndSort(models) {
+  let list = [...models];
+
+  if (state.type === 'pro') list = list.filter(m => m.isPro);
+  if (state.type === 'free') list = list.filter(m => m.isFree);
+  if (state.search) {
+    const q = state.search.toLowerCase();
+    list = list.filter(m => m.name?.toLowerCase().includes(q) || m.slug?.includes(q));
+  }
+
+  // Сортировка
+  const [field, dir] = state.sortOrder.split('-');
+  list.sort((a, b) => {
+    let av, bv;
+    if (field === 'fav') { av = a.favorites ?? -1; bv = b.favorites ?? -1; }
+    else if (field === 'growth') { av = getGrowth(a) ?? -1; bv = getGrowth(b) ?? -1; }
+    else if (field === 'price') { av = a.price ?? 0; bv = b.price ?? 0; }
+    else { av = 0; bv = 0; }
+    return dir === 'desc' ? bv - av : av - bv;
+  });
+
+  // Если режим "прирост" — сортируем по приросту
+  if (state.mode === 'growth') {
+    list.sort((a, b) => (getGrowth(b) ?? -1) - (getGrowth(a) ?? -1));
+  }
+
+  return list;
+}
+
+// ── Stats ─────────────────────────────────────────────────────────────────────
+function updateStats(models) {
+  const withFav = models.filter(m => m.favorites != null);
+  const maxFav = withFav.length ? Math.max(...withFav.map(m => m.favorites)) : null;
+  const growths = models.map(m => getGrowth(m)).filter(g => g != null && g > 0);
+  const totalGrowth = growths.reduce((s, g) => s + g, 0);
+  const avgGrowth = growths.length ? Math.round(totalGrowth / growths.length) : null;
+
+  document.getElementById('s-total').textContent = models.length.toLocaleString('ru');
+  document.getElementById('s-maxfav').textContent = maxFav != null ? maxFav.toLocaleString('ru') : '—';
+  document.getElementById('s-growth').textContent = totalGrowth ? '+' + totalGrowth.toLocaleString('ru') : '—';
+  document.getElementById('s-avggrowth').textContent = avgGrowth != null ? '+' + avgGrowth : '—';
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function showLoading() {
+  document.getElementById('content').innerHTML = `<div class="state-box"><div class="spinner"></div><h2>Загрузка...</h2></div>`;
+}
+
+async function render() {
+  const view = state.view;
+
+  if (view === 'ranking') { renderRanking(); return; }
+  if (view === 'subcats') { renderSubcatRanking(); return; }
+
+  // Конкретный раздел или все
+  const sectionId = view === 'all' ? null : view;
+  if (sectionId && !state.data[sectionId]) { showLoading(); await loadSection(sectionId); }
+
+  const ordered = getOrderedModels(sectionId);
+  const filtered = filterAndSort(ordered.length ? ordered : getAllModels(sectionId));
+
+  updateStats(getAllModels(sectionId));
+  updateBadges();
+
+  const start = (state.page - 1) * state.perPage;
+  const pageItems = filtered.slice(start, start + state.perPage);
+  const totalPages = Math.ceil(filtered.length / state.perPage);
+
+  if (filtered.length === 0) {
+    document.getElementById('content').innerHTML = `<div class="state-box"><div class="big">🔍</div><h2>Ничего не найдено</h2><p>Попробуй изменить фильтры или запусти сканирование</p></div>`;
+    return;
+  }
+
+  // Топ-10 чарт
+  const topForChart = [...getAllModels(sectionId)]
+    .filter(m => m.favorites != null).sort((a,b) => b.favorites - a.favorites).slice(0, 10);
+
+  const html = `
+    ${topForChart.length ? renderChart(topForChart) : ''}
+    <div class="models-grid">${pageItems.map((m, i) => renderCard(m, start + i + 1)).join('')}</div>
+    ${renderPagination(state.page, totalPages, filtered.length)}
+  `;
+  document.getElementById('content').innerHTML = html;
+  document.querySelectorAll('img[data-src]').forEach(img => observer.observe(img));
+}
+
+function renderRanking() {
+  const sections = CFG.sections.map(s => {
+    const d = state.data[s.id];
+    const models = d?.models ? Object.values(d.models) : [];
+    const totalFav = models.reduce((sum, m) => sum + (m.favorites || 0), 0);
+    const growths = models.map(m => getGrowth(m)).filter(g => g != null && g > 0);
+    const totalGrowth = growths.reduce((sum, g) => sum + g, 0);
+    return { ...s, totalFav, totalGrowth, modelCount: models.length };
+  });
+
+  const sorted = [...sections].sort((a, b) =>
+    state.mode === 'growth' ? b.totalGrowth - a.totalGrowth : b.totalFav - a.totalFav);
+  const maxVal = sorted[0]?.[state.mode === 'growth' ? 'totalGrowth' : 'totalFav'] || 1;
+
+  updateStats(Object.values(state.data).flatMap(d => d?.models ? Object.values(d.models) : []));
+
+  document.getElementById('content').innerHTML = `
+    <div class="section-divider">Рейтинг разделов — ${state.mode === 'growth' ? 'по приросту за период' : 'по суммарному избранному'}</div>
+    <div class="ranking-grid">
+      ${sorted.map((s, i) => {
+        const val = state.mode === 'growth' ? s.totalGrowth : s.totalFav;
+        const pct = maxVal ? (val / maxVal * 100).toFixed(1) : 0;
+        const metaD = state.meta?.sections?.[s.id];
+        return `
+          <div class="rank-card" onclick="setView('${s.id}')">
+            <div class="rank-card-header">
+              <span class="rank-icon">${s.icon}</span>
+              <span class="rank-name">${s.name}</span>
+              <span class="rank-pos">#${i+1}</span>
+            </div>
+            <div class="rank-bar-wrap"><div class="rank-bar-fill" style="width:${pct}%"></div></div>
+            <div class="rank-meta">
+              <div class="rank-meta-item">❤️ <span>${(val||0).toLocaleString('ru')}</span></div>
+              <div class="rank-meta-item">📦 <span>${s.modelCount.toLocaleString('ru')}</span> моделей</div>
+              ${metaD?.topModel ? `<div class="rank-meta-item" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">🏆 <span title="${metaD.topModel}">${metaD.topModel}</span></div>` : ''}
+            </div>
+          </div>`;
+      }).join('')}
+    </div>
+  `;
+}
+
+function renderSubcatRanking() {
+  // Собираем статистику по всем подразделам из всех разделов
+  const allSubcats = [];
+  for (const s of CFG.sections) {
+    const d = state.data[s.id];
+    if (!d?.subcatStats) continue;
+    for (const [subId, stat] of Object.entries(d.subcatStats)) {
+      if (stat.modelCount === 0 && stat.totalFavorites === 0) continue;
+
+      // Считаем прирост для подраздела
+      const subModels = Object.values(d.models || {}).filter(m => {
+        const found = d.subcats?.find(sc => sc.subcat === m.subcat || sc.id === m.subcat);
+        return found?.id === subId;
+      });
+      const totalGrowth = subModels.map(m => getGrowth(m)).filter(g => g != null && g > 0).reduce((s,g) => s+g, 0);
+
+      allSubcats.push({
+        ...stat,
+        sectionName: s.name,
+        sectionIcon: s.icon,
+        sectionId: s.id,
+        totalGrowth,
+      });
+    }
+  }
+
+  const sorted = [...allSubcats].sort((a, b) =>
+    state.mode === 'growth' ? b.totalGrowth - a.totalGrowth : b.totalFavorites - a.totalFavorites);
+  const maxVal = sorted[0]?.[state.mode === 'growth' ? 'totalGrowth' : 'totalFavorites'] || 1;
+
+  updateStats(Object.values(state.data).flatMap(d => d?.models ? Object.values(d.models) : []));
+
+  document.getElementById('content').innerHTML = `
+    <div class="section-divider">Рейтинг подразделов — ${state.mode === 'growth' ? 'по приросту за период' : 'по суммарному избранному'}</div>
+    <table class="subcats-table">
+      <thead><tr>
+        <th>#</th><th>Подраздел</th><th>Раздел</th>
+        <th>Моделей</th><th>Суммарно ❤️</th><th>Прирост</th><th>Топ модель</th>
+        <th style="width:120px">Популярность</th>
+      </tr></thead>
+      <tbody>
+        ${sorted.slice(0, 100).map((s, i) => {
+          const val = state.mode === 'growth' ? s.totalGrowth : s.totalFavorites;
+          const pct = maxVal ? (val / maxVal * 100).toFixed(1) : 0;
+          const topModel = s.topSlug ? (state.data[s.sectionId]?.models?.[s.topSlug]) : null;
+          return `
+            <tr onclick="setView('${s.sectionId}')">
+              <td style="color:var(--warning);font-weight:700">#${i+1}</td>
+              <td style="font-weight:500">${s.name}</td>
+              <td style="color:var(--muted)">${s.sectionIcon} ${s.sectionName}</td>
+              <td>${(s.modelCount||0).toLocaleString('ru')}</td>
+              <td style="color:var(--accent2);font-weight:600">❤️ ${(s.totalFavorites||0).toLocaleString('ru')}</td>
+              <td style="color:var(--success)">+${(s.totalGrowth||0).toLocaleString('ru')}</td>
+              <td style="color:var(--muted);font-size:12px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${topModel?.name||''}">
+                ${topModel ? `${topModel.name} (${topModel.favorites} ❤️)` : '—'}
+              </td>
+              <td><div class="subcat-bar"><div class="subcat-bar-fill" style="width:${pct}%"></div></div></td>
+            </tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+function renderChart(models) {
+  const max = models[0]?.favorites || 1;
+  return `
+    <div class="chart-section">
+      <div class="chart-title">Топ-10 по избранному</div>
+      ${models.map(m => `
+        <div class="bar-row">
+          <div class="bar-label" title="${m.name}">${m.name}</div>
+          <div class="bar-track"><div class="bar-fill" style="width:${(m.favorites/max*100).toFixed(1)}%"></div></div>
+          <div class="bar-val">❤️ ${m.favorites.toLocaleString('ru')}</div>
+        </div>`).join('')}
+    </div>`;
+}
+
+function renderCard(m, rank) {
+  const src = imgSrc(m.preview);
+  const growth = getGrowth(m);
+  const growthHtml = growth != null && growth > 0
+    ? `<span class="trend-up${growth > 100 ? ' trend-hot' : ''}">+${growth.toLocaleString('ru')}</span>` : '';
+
+  return `
+    <div class="model-card" onclick="window.open('${m.url}','_blank')">
+      <div class="card-thumb">
+        ${src ? `<img data-src="${src}" alt="${m.name}">` : '<div class="no-img">📦</div>'}
+        <span class="badge ${m.isPro?'pro':'free'}">${m.isPro?'PRO':'FREE'}</span>
+        ${rank <= 10 ? `<span class="rank-num">#${rank}</span>` : ''}
+        ${growthHtml}
+      </div>
+      <div class="card-body">
+        <div class="card-name">${m.name}</div>
+        <div class="card-meta">
+          ${m.favorites != null ? `<span class="meta-chip hi">❤️ ${m.favorites.toLocaleString('ru')}</span>` : ''}
+          ${growth != null && growth > 0 ? `<span class="meta-chip growth">+${growth.toLocaleString('ru')}</span>` : ''}
+          ${m.likes != null ? `<span class="meta-chip">👍 ${m.likes}</span>` : ''}
+        </div>
+      </div>
+      <div class="card-footer">
+        <span class="price ${!m.isPro||m.price===0?'free':''}">${m.price > 0 ? m.price.toLocaleString('ru') + ' ₽' : 'FREE'}</span>
+        <a class="open-link" href="${m.url}" target="_blank" onclick="event.stopPropagation()">Открыть →</a>
+      </div>
+    </div>`;
+}
+
+function renderPagination(cur, total, count) {
+  if (total <= 1) return `<div style="padding:14px 0;text-align:center;color:var(--muted);font-size:12px">Показано ${count.toLocaleString('ru')} моделей</div>`;
+  const pages = [];
+  for (let i = Math.max(1, cur-2); i <= Math.min(total, cur+2); i++) pages.push(i);
+  return `
+    <div class="pagination">
+      <button class="page-btn" onclick="goPage(${cur-1})" ${cur===1?'disabled':''}>← Назад</button>
+      ${cur > 3 ? `<button class="page-btn" onclick="goPage(1)">1</button><span style="color:var(--muted)">…</span>` : ''}
+      ${pages.map(p => `<button class="page-btn ${p===cur?'active':''}" onclick="goPage(${p})">${p}</button>`).join('')}
+      ${cur < total-2 ? `<span style="color:var(--muted)">…</span><button class="page-btn" onclick="goPage(${total})">${total}</button>` : ''}
+      <button class="page-btn" onclick="goPage(${cur+1})" ${cur===total?'disabled':''}>Вперёд →</button>
+      <span style="color:var(--muted);font-size:12px;margin-left:6px">Всего: ${count.toLocaleString('ru')}</span>
+    </div>`;
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+async function init() {
+  buildNav();
+  const ok = await loadMeta();
+  if (!ok) {
+    document.getElementById('content').innerHTML = `
+      <div class="state-box">
+        <div class="big">🚀</div>
+        <h2>Данные ещё не собраны</h2>
+        <p>Запусти сканирование: GitHub → Actions → "3ddd Scraper" → "Run workflow"</p>
+      </div>`;
+    document.getElementById('last-update').textContent = 'Нет данных';
+    return;
+  }
+  await loadAll();
+  updateBadges();
+  render();
+}
+
+init();
+</script>
+</body>
+</html>

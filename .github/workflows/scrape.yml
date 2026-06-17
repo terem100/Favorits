@@ -1,0 +1,52 @@
+name: 3ddd Scraper
+
+on:
+  schedule:
+    - cron: '0 3 * * *'  # каждую ночь в 6:00 Москва
+  workflow_dispatch:
+    inputs:
+      group:
+        description: 'Номер группы разделов (0-4), или оставь пустым для авто'
+        required: false
+        default: ''
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300  # 5 часов максимум
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Переопределить группу (если задана вручную)
+        if: ${{ github.event.inputs.group != '' }}
+        run: |
+          echo "Ручной запуск: группа ${{ github.event.inputs.group }}"
+          node -e "
+            const fs = require('fs');
+            const p = './dashboard/data/rotation-state.json';
+            const s = fs.existsSync(p) ? JSON.parse(fs.readFileSync(p)) : {};
+            s.currentGroup = parseInt('${{ github.event.inputs.group }}');
+            fs.mkdirSync('./dashboard/data', {recursive:true});
+            fs.writeFileSync(p, JSON.stringify(s, null, 2));
+          "
+
+      - name: Запуск сканера
+        run: node scraper/scraper.js
+
+      - name: Коммит данных
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "3ddd Bot"
+          git add dashboard/data/
+          git diff --staged --quiet || git commit -m "📊 Обновление $(date '+%Y-%m-%d') — группа $(cat dashboard/data/rotation-state.json | node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>console.log(JSON.parse(d).currentGroup||0))')"
+          git push

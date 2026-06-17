@@ -1,0 +1,34 @@
+{
+  "startedAt": "2025-01-15T03:00:00.000Z",
+  "finishedAt": "2025-01-15T03:45:00.000Z",
+  "sections_list": [
+    { "id": "furniture", "name": "Мебель" },
+    { "id": "lighting", "name": "Освещение" },
+    { "id": "decor", "name": "Декор" },
+    { "id": "bathroom", "name": "Санузел" },
+    { "id": "kitchen", "name": "Кухня" },
+    { "id": "plants", "name": "Растения" },
+    { "id": "tech", "name": "Техника" },
+    { "id": "exterior", "name": "Экстерьер" },
+    { "id": "other", "name": "Другие модели" },
+    { "id": "children", "name": "Детская" },
+    { "id": "transport", "name": "Транспорт" },
+    { "id": "materials", "name": "Материалы" },
+    { "id": "textures", "name": "Текстуры" }
+  ],
+  "sections": {
+    "furniture": { "name": "Мебель", "totalModels": 847 },
+    "lighting": { "name": "Освещение", "totalModels": 423 },
+    "decor": { "name": "Декор", "totalModels": 612 },
+    "bathroom": { "name": "Санузел", "totalModels": 298 },
+    "kitchen": { "name": "Кухня", "totalModels": 334 },
+    "plants": { "name": "Растения", "totalModels": 256 },
+    "tech": { "name": "Техника", "totalModels": 189 },
+    "exterior": { "name": "Экстерьер", "totalModels": 445 },
+    "other": { "name": "Другие модели", "totalModels": 378 },
+    "children": { "name": "Детская", "totalModels": 143 },
+    "transport": { "name": "Транспорт", "totalModels": 267 },
+    "materials": { "name": "Материалы", "totalModels": 534 },
+    "textures": { "name": "Текстуры", "totalModels": 891 }
+  }
+}
