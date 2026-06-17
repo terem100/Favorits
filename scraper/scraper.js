@@ -62,62 +62,13 @@ function delay(ms, jitter = 0) {
 
 // Получаем список моделей через страницу каталога с sitemaps
 async function fetchModelsViaSearch(cat, subcats, page, order) {
-  // Пробуем несколько вариантов URL
-  const urls = [
-    `/3dmodels?cat=${cat}&order=${order}&page=${page}`,
-    `/3dmodels?cat=${cat}&page=${page}`,
-  ];
-
-  for (const urlPath of urls) {
-    try {
-      const { status, body } = await req({
-        hostname: '3ddd.ru',
-        path: urlPath,
-        method: 'GET',
-        headers: {
-          'User-Agent': CONFIG.userAgent,
-          'Accept': 'text/html,application/xhtml+xml',
-          'Accept-Language': 'ru-RU,ru;q=0.9',
-          'Referer': 'https://3ddd.ru/3dmodels',
-        },
-      });
-
-      if (status === 200) {
-        // Ищем JSON данные внутри HTML (Angular SSR иногда встраивает их)
-        const jsonMatch = body.match(/<script[^>]*type="application\/json"[^>]*>([\s\S]*?)<\/script>/gi);
-        if (jsonMatch) {
-          for (const script of jsonMatch) {
-            const content = script.replace(/<\/?script[^>]*>/gi, '');
-            try {
-              const data = JSON.parse(content);
-              if (data?.models || data?.data?.models) {
-                console.log(`    ✓ Нашли JSON в HTML!`);
-                return data?.data || data;
-              }
-            } catch {}
-          }
-        }
-
-        // Ищем ссылки на модели
-        const slugs = [...new Set([...body.matchAll(/\/3dmodels\/show\/([a-z0-9_-]+)/gi)].map(m => m[1]))];
-        if (slugs.length > 0) {
-          console.log(`    ✓ Нашли ${slugs.length} ссылок в HTML`);
-          return { models: slugs.map(slug => ({ slug, fromHtml: true })), total_value: slugs.length, page };
-        }
-
-        console.log(`    ⚠️ HTML получен но моделей нет (${body.length} байт)`);
-      } else {
-        console.log(`    ⚠️ Статус ${status} для ${urlPath}`);
-      }
-    } catch(e) {
-      console.log(`    ❌ ${e.message}`);
-    }
-  }
-
-  // API: передаём categories + page в теле запроса
+  // Сразу используем JSON API
   try {
     const modelsBody = JSON.stringify({ categories: subcats, page });
-    const refererUrl = `https://3ddd.ru/3dmodels?cat=${cat}&${subcats.map(s=>`subcat=${s}`).join('&')}&page=${page}`;
+    const refererUrl = subcats.length > 0
+      ? `https://3ddd.ru/3dmodels?cat=${cat}&${subcats.map(s=>`subcat=${s}`).join('&')}&page=${page}`
+      : `https://3ddd.ru/3dmodels?cat=${cat}&page=${page}`;
+
     const { status, body: resp } = await req({
       hostname: '3ddd.ru',
       path: '/api/models',
@@ -136,16 +87,21 @@ async function fetchModelsViaSearch(cat, subcats, page, order) {
       },
     }, modelsBody);
 
+    console.log(`    API стр.${page}: статус ${status}`);
+
     if (status === 200) {
       const json = JSON.parse(resp);
-      if (json.data?.models?.length) return json.data;
+      if (json.data?.models?.length) {
+        return json.data;
+      }
+      console.log(`    ⚠️ Моделей нет (total: ${json.data?.total_value}, hash: ${json.data?.search_hash})`);
     }
   } catch(e) {
-    console.log(`    API ошибка: ${e.message}`);
+    console.log(`    ❌ API ошибка: ${e.message}`);
   }
-
   return null;
 }
+
 
 function parseModelFromApi(m) {
   const img = m.images?.[0];
