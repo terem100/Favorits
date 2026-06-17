@@ -1,32 +1,31 @@
 #!/usr/bin/env node
-const https = require('https');
-const zlib = require('zlib');
+const puppeteer = require('puppeteer-core');
 const fs = require('fs');
 const path = require('path');
 
 const CONFIG = {
   catalogPages: 50,
   catalogDelayMs: 2000,
-  detailDelayMs: 4000,
-  detailDelayJitter: 2000,
+  detailDelayMs: 3000,
   outputDir: './dashboard/data',
   stateFile: './dashboard/data/rotation-state.json',
-  userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36',
+  // Системный Chrome на GitHub Actions Ubuntu
+  chromePath: process.env.CHROME_PATH || '/usr/bin/google-chrome',
 };
 
 const SECTIONS = [
-  { id: 'furniture', name: 'Мебель', cat: 'furniture', icon: '🛋️', subcategories: ['armchairs','beds','chairs','consoles','dressing-tables','hallway-furniture','headboards','miscellaneous-furniture','miscellaneous-soft-seating','office-furniture','racks','sideboards-and-chests-of-drawers','sofas','tables','tables-and-chairs','tv-walls','wardrobes-and-display-cabinets'] },
-  { id: 'lighting',  name: 'Освещение', cat: 'light', icon: '💡', subcategories: ['built-in-lamps','ceiling-lamps','floor-lamps','neon','pendant-lamps','street-lamps','table-lamps','technical-lamps','wall-lamps'] },
-  { id: 'decor',     name: 'Декор', cat: 'decor', icon: '🖼️', subcategories: ['3d-panels','books','carpets','clocks','clothes-and-shoes','curtains','decorative-set','frames','interior-objects','mirrors','molding','pillows','sculptures','vases'] },
-  { id: 'bathroom',  name: 'Санузел', cat: 'bathroom', icon: '🚿', subcategories: ['bath-decor','bath-faucets','bathtubs','bathroom-furniture','shower-cabins','towel-rails','wash-basins','wc-and-bidet'] },
-  { id: 'kitchen',   name: 'Кухня', cat: 'kitchen', icon: '🍳', subcategories: ['dishes','food-and-drinks','kitchen-appliances','kitchen-faucets','kitchen-furniture','kitchen-sinks','kitchen-stuff'] },
-  { id: 'plants',    name: 'Растения', cat: 'plants', icon: '🌿', subcategories: ['bouquets','bushes','grass','indoor-plants','outdoor-plants','phytowalls','trees'] },
-  { id: 'tech',      name: 'Техника', cat: 'tech', icon: '📱', subcategories: ['audio','computers-and-electronics','home-appliances','phones','tech-other','tv'] },
-  { id: 'exterior',  name: 'Экстерьер', cat: 'exterior', icon: '🏠', subcategories: ['barbecue-and-grill','buildings','exterior-other','facade-elements','fencing','nature-details','pavement','playground','urban-environment'] },
-  { id: 'children',  name: 'Детская', cat: 'children', icon: '🧸', subcategories: ['children-beds','children-items','children-tables-and-chairs','children-wardrobes','other-children-items','toys'] },
-  { id: 'transport', name: 'Транспорт', cat: 'transport', icon: '🚗', subcategories: ['air-transport','land-transport','water-transport'] },
-  { id: 'materials', name: 'Материалы', cat: 'materials', icon: '🎨', subcategories: ['fabric-materials','glass-materials','leather-materials','liquid-materials','metal-materials','miscellaneous-materials','plastic-materials','stone-materials','tile-materials','wood-materials'] },
-  { id: 'textures',  name: 'Текстуры', cat: 'textures', icon: '🖼️', subcategories: ['brick-textures','carpet-textures','fabric-textures','floor-textures','hdri','leather-textures','metal-textures','miscellaneous-textures','organic-textures','panoramic','stone-textures','tile-textures','wall-textures','wood-textures'] },
+  { id: 'furniture', name: 'Мебель',        cat: 'furniture',           icon: '🛋️', subcategories: ['armchairs','beds','chairs','consoles','dressing-tables','hallway-furniture','headboards','miscellaneous-furniture','miscellaneous-soft-seating','office-furniture','racks','sideboards-and-chests-of-drawers','sofas','tables','tables-and-chairs','tv-walls','wardrobes-and-display-cabinets'] },
+  { id: 'lighting',  name: 'Освещение',     cat: 'light',               icon: '💡', subcategories: ['built-in-lamps','ceiling-lamps','floor-lamps','neon','pendant-lamps','street-lamps','table-lamps','technical-lamps','wall-lamps'] },
+  { id: 'decor',     name: 'Декор',         cat: 'decor',               icon: '🖼️', subcategories: ['3d-panels','books','carpets','clocks','clothes-and-shoes','curtains','decorative-set','frames','interior-objects','mirrors','molding','pillows','sculptures','vases'] },
+  { id: 'bathroom',  name: 'Санузел',       cat: 'bathroom',            icon: '🚿', subcategories: ['bath-decor','bath-faucets','bathtubs','bathroom-furniture','shower-cabins','towel-rails','wash-basins','wc-and-bidet'] },
+  { id: 'kitchen',   name: 'Кухня',         cat: 'kitchen',             icon: '🍳', subcategories: ['dishes','food-and-drinks','kitchen-appliances','kitchen-faucets','kitchen-furniture','kitchen-sinks','kitchen-stuff'] },
+  { id: 'plants',    name: 'Растения',      cat: 'plants',              icon: '🌿', subcategories: ['bouquets','bushes','grass','indoor-plants','outdoor-plants','phytowalls','trees'] },
+  { id: 'tech',      name: 'Техника',       cat: 'tech',                icon: '📱', subcategories: ['audio','computers-and-electronics','home-appliances','phones','tech-other','tv'] },
+  { id: 'exterior',  name: 'Экстерьер',     cat: 'exterior',            icon: '🏠', subcategories: ['barbecue-and-grill','buildings','exterior-other','facade-elements','fencing','nature-details','pavement','playground','urban-environment'] },
+  { id: 'children',  name: 'Детская',       cat: 'children',            icon: '🧸', subcategories: ['children-beds','children-items','children-tables-and-chairs','children-wardrobes','other-children-items','toys'] },
+  { id: 'transport', name: 'Транспорт',     cat: 'transport',           icon: '🚗', subcategories: ['air-transport','land-transport','water-transport'] },
+  { id: 'materials', name: 'Материалы',     cat: 'materials',           icon: '🎨', subcategories: ['fabric-materials','glass-materials','leather-materials','liquid-materials','metal-materials','miscellaneous-materials','plastic-materials','stone-materials','tile-materials','wood-materials'] },
+  { id: 'textures',  name: 'Текстуры',      cat: 'textures',            icon: '🖼️', subcategories: ['brick-textures','carpet-textures','fabric-textures','floor-textures','hdri','leather-textures','metal-textures','miscellaneous-textures','organic-textures','panoramic','stone-textures','tile-textures','wall-textures','wood-textures'] },
   { id: 'other',     name: 'Другие модели', cat: 'miscellaneous-models', icon: '📦', subcategories: ['beauty-salon','billiards','doors','fireplaces','living-creatures','miscellaneous-objects','musical-instruments','radiators','restaurant','shop','sport','stairs','weapons','windows'] },
 ];
 
@@ -38,248 +37,187 @@ const SECTION_GROUPS = [
   ['other'],
 ];
 
-// ─── HTTP helper с автоматическим gzip-декодированием ───────────────────────
-function req(options, body) {
-  return new Promise((resolve, reject) => {
-    const r = https.request(options, res => {
-      if ([301, 302].includes(res.statusCode)) {
-        const loc = res.headers.location;
-        if (loc) {
-          return req(
-            { ...options, hostname: '3ddd.ru', path: loc.startsWith('http') ? new URL(loc).pathname : loc, method: options.method },
-            body
-          ).then(resolve).catch(reject);
-        }
-      }
-
-      const chunks = [];
-      res.on('data', chunk => chunks.push(chunk));
-      res.on('end', () => {
-        const raw = Buffer.concat(chunks);
-        const encoding = res.headers['content-encoding'] || '';
-
-        const decode = (buf) => {
-          if (encoding === 'gzip') {
-            return new Promise((res, rej) => zlib.gunzip(buf, (e, d) => e ? rej(e) : res(d.toString('utf8'))));
-          } else if (encoding === 'br') {
-            return new Promise((res, rej) => zlib.brotliDecompress(buf, (e, d) => e ? rej(e) : res(d.toString('utf8'))));
-          } else if (encoding === 'deflate') {
-            return new Promise((res, rej) => zlib.inflate(buf, (e, d) => e ? rej(e) : res(d.toString('utf8'))));
-          }
-          return Promise.resolve(buf.toString('utf8'));
-        };
-
-        decode(raw)
-          .then(text => resolve({ status: res.statusCode, body: text, headers: res.headers }))
-          .catch(reject);
-      });
-    });
-
-    r.on('error', reject);
-    r.setTimeout(20000, () => { r.destroy(); reject(new Error('Timeout')); });
-    if (body) r.write(body);
-    r.end();
-  });
-}
-
 function delay(ms, jitter = 0) {
   return new Promise(r => setTimeout(r, ms + Math.floor(Math.random() * jitter)));
-}
-
-// ─── Каталог моделей через JSON API ─────────────────────────────────────────
-async function fetchModelsViaSearch(cat, subcats, page) {
-  try {
-    const payload = { categories: subcats };
-    const modelsBody = JSON.stringify(payload);
-
-    const refererUrl = subcats.length > 0
-      ? `https://3ddd.ru/3dmodels?cat=${cat}&${subcats.map(s => `subcat=${s}`).join('&')}&page=${page}`
-      : `https://3ddd.ru/3dmodels?cat=${cat}&page=${page}`;
-
-    const { status, body: resp } = await req({
-      hostname: '3ddd.ru',
-      path: `/api/models?page=${page}`,   // <-- page через query, не в body
-      method: 'POST',
-      headers: {
-        'accept': 'application/json, text/plain, */*',
-        'accept-encoding': 'gzip, deflate, br',
-        'content-type': 'application/json',
-        'content-length': Buffer.byteLength(modelsBody),
-        'referer': refererUrl,
-        'user-agent': CONFIG.userAgent,
-        'origin': 'https://3ddd.ru',
-        'cookie': 'besrv=app180',
-        'cache-control': 'no-cache',
-        'pragma': 'no-cache',
-        'expires': 'Sat, 01 Jan 2000 00:00:00 GMT',
-        'sec-fetch-dest': 'empty',
-        'sec-fetch-mode': 'cors',
-        'sec-fetch-site': 'same-origin',
-      },
-    }, modelsBody);
-
-    console.log(`    API стр.${page}: статус ${status}`);
-
-    if (status === 200) {
-      const json = JSON.parse(resp);
-      if (json.data?.models?.length) return json.data;
-      console.log(`    ⚠️ Моделей нет (total: ${json.data?.total_value})`);
-    } else {
-      console.log(`    ⚠️ Ответ: ${resp.slice(0, 200)}`);
-    }
-  } catch (e) {
-    console.log(`    ❌ API ошибка: ${e.message}`);
-  }
-  return null;
-}
-
-function parseModelFromApi(m) {
-  const img = m.images?.[0];
-  const preview = img ? `https://b6.3ddd.ru/${img.web_path}` : null;
-  return {
-    slug: m.slug,
-    url: `https://3ddd.ru/3dmodels/show/${m.slug}`,
-    name: m.title || m.title_en || m.slug,
-    preview,
-    price: parseInt(m.price || 0),
-    isPro: m.model_type === 'pro',
-    isFree: m.model_type === 'free' || !m.price || m.price === '0',
-    votes: parseInt(m.votes_count || 0),
-    subcat: m.category?.slug || null,
-    subcatName: m.category?.title || null,
-    favorites: null,
-  };
-}
-
-// ─── Парсинг счётчика избранного из HTML ─────────────────────────────────────
-// Сайт рендерит Angular SSR, HTML содержит:
-// <div _ngcontent-ng-c...="" class="added-to-collections ng-tns-... ng-star-inserted"> 11 </div>
-function parseFavoritesFromHtml(html) {
-  // Надёжный поиск: ищем класс added-to-collections, атрибуты в любом порядке
-  const m = html.match(/<[^>]+class="[^"]*added-to-collections[^"]*"[^>]*>\s*(\d+)\s*<\//i);
-  return m ? parseInt(m[1]) : null;
-}
-
-async function fetchAllModels(section) {
-  const allModels = {};
-  let page = 1;
-  console.log(`\n  📋 ${section.name}`);
-
-  while (page <= CONFIG.catalogPages) {
-    const data = await fetchModelsViaSearch(section.cat, section.subcategories || [], page);
-    if (!data || !data.models?.length) break;
-
-    for (const m of data.models) {
-      const slug = m.slug;
-      if (!allModels[slug]) {
-        allModels[slug] = parseModelFromApi(m);
-      }
-    }
-
-    const total = data.total_value || 0;
-    const perPage = data.per_page || 60;
-    const totalPages = Math.ceil(total / perPage);
-    console.log(`    Стр.${page}/${Math.min(totalPages || page, CONFIG.catalogPages)}: итого ${Object.keys(allModels).length}`);
-
-    if (page >= (totalPages || 1)) break;
-    page++;
-    await delay(CONFIG.catalogDelayMs, 1000);
-  }
-
-  return allModels;
-}
-
-// ─── Получение избранного через HTML страницы модели ─────────────────────────
-async function enrichFavorites(allModels, existingModels) {
-  const slugs = Object.keys(allModels);
-  if (!slugs.length) return;
-  console.log(`\n  ❤️  Получаем избранное для ${slugs.length} моделей...`);
-  let done = 0, errors = 0, found = 0;
-
-  for (const slug of slugs) {
-    const model = allModels[slug];
-    const existing = existingModels?.[slug];
-    if (!model.preview && existing?.preview) model.preview = existing.preview;
-
-    try {
-      const { status, body } = await req({
-        hostname: '3ddd.ru',
-        path: `/3dmodels/show/${slug}`,
-        method: 'GET',
-        headers: {
-          'user-agent': CONFIG.userAgent,
-          'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-          'accept-encoding': 'gzip, deflate, br',   // <-- ключевое исправление
-          'accept-language': 'ru-RU,ru;q=0.9,en-US;q=0.8',
-          'referer': 'https://3ddd.ru/3dmodels',
-          'sec-fetch-dest': 'document',
-          'sec-fetch-mode': 'navigate',
-          'sec-fetch-site': 'same-origin',
-          'cookie': 'besrv=app180',
-        },
-      });
-
-      if (status === 200) {
-        const fav = parseFavoritesFromHtml(body);
-        if (fav != null) {
-          model.favorites = fav;
-          found++;
-        } else {
-          // Отладка: логируем первый неудачный случай
-          if (found === 0 && done === 0) {
-            const snippet = body.match(/added-to-collections[\s\S]{0,200}/i);
-            console.log(`    🔍 Отладка HTML (первая модель ${slug}):`);
-            console.log(`       Длина тела: ${body.length}`);
-            console.log(`       Фрагмент: ${snippet ? snippet[0].slice(0, 150) : 'класс не найден в HTML'}`);
-          }
-        }
-
-        if (!model.name || model.name === slug) {
-          const t = body.match(/property="og:title"\s+content="([^"]+)"/i);
-          if (t) model.name = t[1].replace(/\s*-.*$/, '').trim();
-        }
-        if (!model.preview) {
-          const i = body.match(/property="og:image"\s+content="([^"]+)"/i);
-          if (i) model.preview = i[1];
-        }
-        model.scannedAt = new Date().toISOString();
-      }
-      done++;
-    } catch (e) {
-      errors++;
-    }
-
-    // Сохраняем историю избранного
-    if (model.favorites != null) {
-      const prev = existing?.favoritesHistory || [];
-      const lastVal = prev.length ? prev[prev.length - 1].value : null;
-      model.favoritesHistory = lastVal !== model.favorites
-        ? [...prev, { date: new Date().toISOString(), value: model.favorites }]
-        : prev;
-    } else if (existing?.favoritesHistory) {
-      model.favoritesHistory = existing.favoritesHistory;
-    }
-
-    if ((done + errors) % 50 === 0) {
-      console.log(`    ${done}/${slugs.length} готово, ❤️ найдено: ${found}`);
-    }
-    await delay(CONFIG.detailDelayMs, CONFIG.detailDelayJitter);
-  }
-  console.log(`  ✓ ${done} обновлено, ❤️ найдено: ${found}, ошибок: ${errors}`);
 }
 
 function loadExisting(p) {
   try { return fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, 'utf8')) : null; } catch { return null; }
 }
 
-async function processSection(section) {
+// ─── Запускаем браузер один раз на весь скрипт ───────────────────────────────
+async function launchBrowser() {
+  console.log(`🌐 Запуск Chrome: ${CONFIG.chromePath}`);
+  const browser = await puppeteer.launch({
+    executablePath: CONFIG.chromePath,
+    headless: 'new',
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-gpu',
+      '--lang=ru-RU',
+    ],
+  });
+  console.log(`✓ Chrome запущен (версия: ${await browser.version()})`);
+  return browser;
+}
+
+// ─── Получаем все модели раздела через перехват API-запросов ─────────────────
+async function fetchAllModels(browser, section) {
+  const allModels = {};
+  const page = await browser.newPage();
+
+  // Притворяемся обычным пользователем
+  await page.setExtraHTTPHeaders({ 'Accept-Language': 'ru-RU,ru;q=0.9' });
+  await page.setViewport({ width: 1440, height: 900 });
+
+  console.log(`\n  📋 ${section.name}`);
+  let pageNum = 1;
+
+  try {
+    while (pageNum <= CONFIG.catalogPages) {
+      const url = `https://3ddd.ru/3dmodels?cat=${section.cat}&${section.subcategories.map(s => `subcat=${s}`).join('&')}&page=${pageNum}`;
+
+      // Перехватываем ответ /api/models который сайт сам делает при загрузке страницы
+      let apiData = null;
+      const responseHandler = async (response) => {
+        if (response.url().includes('/api/models') && response.request().method() === 'POST') {
+          try {
+            const json = await response.json();
+            if (json.data?.models?.length) apiData = json.data;
+          } catch {}
+        }
+      };
+      page.on('response', responseHandler);
+
+      await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
+      // Даём время на подгрузку если networkidle2 не поймал
+      if (!apiData) await delay(3000);
+
+      page.off('response', responseHandler);
+
+      if (!apiData || !apiData.models?.length) {
+        console.log(`    Стр.${pageNum}: моделей нет, стоп`);
+        break;
+      }
+
+      const before = Object.keys(allModels).length;
+      for (const m of apiData.models) {
+        if (!allModels[m.slug]) {
+          const img = m.images?.[0];
+          allModels[m.slug] = {
+            slug: m.slug,
+            url: `https://3ddd.ru/3dmodels/show/${m.slug}`,
+            name: m.title || m.title_en || m.slug,
+            preview: img ? `https://b6.3ddd.ru/${img.web_path}` : null,
+            price: parseInt(m.price || 0),
+            isPro: m.model_type === 'pro',
+            isFree: m.model_type === 'free' || !m.price || m.price === '0',
+            votes: parseInt(m.votes_count || 0),
+            subcat: m.category?.slug || null,
+            subcatName: m.category?.title || null,
+            favorites: null,
+          };
+        }
+      }
+
+      const added = Object.keys(allModels).length - before;
+      const total = apiData.total_value || 0;
+      const perPage = apiData.per_page || 60;
+      const totalPages = Math.ceil(total / perPage);
+      console.log(`    Стр.${pageNum}/${Math.min(totalPages, CONFIG.catalogPages)}: +${added} новых, итого ${Object.keys(allModels).length}`);
+
+      if (added === 0 || pageNum >= totalPages) break;
+      pageNum++;
+      await delay(CONFIG.catalogDelayMs, 1000);
+    }
+  } finally {
+    await page.close();
+  }
+
+  return allModels;
+}
+
+// ─── Получаем счётчик избранного со страницы каждой модели ──────────────────
+async function enrichFavorites(browser, allModels, existingModels) {
+  const slugs = Object.keys(allModels);
+  if (!slugs.length) return;
+  console.log(`\n  ❤️  Избранное для ${slugs.length} моделей...`);
+
+  const page = await browser.newPage();
+  await page.setViewport({ width: 1440, height: 900 });
+
+  let done = 0, found = 0, errors = 0;
+
+  try {
+    for (const slug of slugs) {
+      const model = allModels[slug];
+      const existing = existingModels?.[slug];
+      if (!model.preview && existing?.preview) model.preview = existing.preview;
+
+      try {
+        await page.goto(`https://3ddd.ru/3dmodels/show/${slug}`, {
+          waitUntil: 'networkidle2',
+          timeout: 30000,
+        });
+
+        // Читаем уже отрендеренный DOM — никакого regex
+        const fav = await page.$eval(
+          '.added-to-collections',
+          el => parseInt(el.textContent.trim()) || null
+        ).catch(() => null);
+
+        if (fav != null) {
+          model.favorites = fav;
+          found++;
+
+          const prev = existing?.favoritesHistory || [];
+          const lastVal = prev.length ? prev[prev.length - 1].value : null;
+          model.favoritesHistory = lastVal !== fav
+            ? [...prev, { date: new Date().toISOString(), value: fav }]
+            : prev;
+        } else if (existing?.favoritesHistory) {
+          model.favoritesHistory = existing.favoritesHistory;
+        }
+
+        // Имя и превью если не было
+        if (!model.name || model.name === slug) {
+          const t = await page.$eval('meta[property="og:title"]', el => el.content).catch(() => null);
+          if (t) model.name = t.replace(/\s*-.*$/, '').trim();
+        }
+        if (!model.preview) {
+          const i = await page.$eval('meta[property="og:image"]', el => el.content).catch(() => null);
+          if (i) model.preview = i;
+        }
+
+        model.scannedAt = new Date().toISOString();
+        done++;
+      } catch (e) {
+        errors++;
+      }
+
+      if ((done + errors) % 20 === 0) {
+        console.log(`    ${done + errors}/${slugs.length} готово, ❤️ найдено: ${found}`);
+      }
+      await delay(CONFIG.detailDelayMs, 1000);
+    }
+  } finally {
+    await page.close();
+  }
+
+  console.log(`  ✓ ${done} обработано, ❤️ найдено: ${found}, ошибок: ${errors}`);
+}
+
+// ─── Обработка одного раздела ────────────────────────────────────────────────
+async function processSection(browser, section) {
   console.log(`\n${'═'.repeat(48)}\n  ${section.icon} ${section.name}\n${'═'.repeat(48)}`);
   const filePath = path.join(CONFIG.outputDir, `${section.id}.json`);
   const existing = loadExisting(filePath);
 
-  const allModels = await fetchAllModels(section);
+  const allModels = await fetchAllModels(browser, section);
 
-  // Подтягиваем старые модели которые не попали в текущий скан
+  // Подтягиваем старые модели
   if (existing?.models) {
     for (const [slug, m] of Object.entries(existing.models)) {
       if (!allModels[slug]) allModels[slug] = m;
@@ -287,7 +225,7 @@ async function processSection(section) {
   }
   console.log(`  📦 Всего: ${Object.keys(allModels).length}`);
 
-  await enrichFavorites(allModels, existing?.models);
+  await enrichFavorites(browser, allModels, existing?.models);
 
   const topByFavorites = Object.values(allModels)
     .filter(m => m.favorites != null)
@@ -321,8 +259,9 @@ async function processSection(section) {
   if (top) console.log(`  🏆 Топ: "${top.name}" — ${top.favorites} ❤️`);
 }
 
+// ─── Главная функция ─────────────────────────────────────────────────────────
 async function main() {
-  console.log('🚀 3ddd Scraper');
+  console.log('🚀 3ddd Scraper (Puppeteer)');
   console.log(`📅 ${new Date().toISOString()}`);
   fs.mkdirSync(CONFIG.outputDir, { recursive: true });
 
@@ -333,8 +272,16 @@ async function main() {
 
   console.log(`\n🔄 Группа ${groupIndex + 1}/${SECTION_GROUPS.length}: ${todaySections.map(s => s.name).join(', ')}`);
 
-  for (const section of todaySections) await processSection(section);
+  const browser = await launchBrowser();
+  try {
+    for (const section of todaySections) {
+      await processSection(browser, section);
+    }
+  } finally {
+    await browser.close();
+  }
 
+  // Обновляем meta.json
   const metaPath = path.join(CONFIG.outputDir, 'meta.json');
   const existingMeta = loadExisting(metaPath) || {};
   const sections = existingMeta.sections || {};
