@@ -114,9 +114,31 @@ async function fetchModelsViaSearch(cat, page, order) {
     }
   }
 
-  // Пробуем API с referer
+  // API: сначала устанавливаем фильтр, потом запрашиваем страницу
   try {
-    const body = JSON.stringify({});
+    // Шаг 1: установить фильтр (категория + сортировка + страница)
+    const filterBody = JSON.stringify({ cat, order, page });
+    const filterResp = await req({
+      hostname: '3ddd.ru',
+      path: '/api/filter_models',
+      method: 'POST',
+      headers: {
+        'accept': 'application/json, text/plain, */*',
+        'content-type': 'application/json',
+        'content-length': Buffer.byteLength(filterBody),
+        'referer': `https://3ddd.ru/3dmodels?cat=${cat}&order=${order}&page=${page}`,
+        'user-agent': CONFIG.userAgent,
+        'origin': 'https://3ddd.ru',
+        'cookie': `besrv=app180`,
+      },
+    }, filterBody);
+
+    // Берём куки из ответа filter_models
+    const setCookie = filterResp.headers['set-cookie'] || '';
+    const sessionCookie = `besrv=app180; ${setCookie}`.replace(/\n/g, '; ');
+
+    // Шаг 2: получить модели с учётом фильтра
+    const modelsBody = JSON.stringify({});
     const { status, body: resp } = await req({
       hostname: '3ddd.ru',
       path: '/api/models',
@@ -124,15 +146,13 @@ async function fetchModelsViaSearch(cat, page, order) {
       headers: {
         'accept': 'application/json, text/plain, */*',
         'content-type': 'application/json',
-        'content-length': Buffer.byteLength(body),
-        'referer': `https://3ddd.ru/3dmodels?cat=${cat}&page=${page}&order=${order}`,
+        'content-length': Buffer.byteLength(modelsBody),
+        'referer': `https://3ddd.ru/3dmodels?cat=${cat}&order=${order}&page=${page}`,
         'user-agent': CONFIG.userAgent,
         'origin': 'https://3ddd.ru',
-        'x-requested-with': 'XMLHttpRequest',
+        'cookie': sessionCookie,
       },
-    }, body);
-
-    console.log(`    API POST статус: ${status}, ответ: ${resp.substring(0, 200)}`);
+    }, modelsBody);
 
     if (status === 200) {
       const json = JSON.parse(resp);
