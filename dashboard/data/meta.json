@@ -1,6 +1,6 @@
 {
   "startedAt": "2025-01-15T03:00:00.000Z",
-  "finishedAt": "2026-06-17T17:33:47.112Z",
+  "finishedAt": "2026-06-17T17:37:28.785Z",
   "sections_list": [
     {
       "id": "furniture",
@@ -127,7 +127,10 @@
     },
     "other": {
       "name": "Другие модели",
-      "totalModels": 378
+      "icon": "📦",
+      "totalModels": 0,
+      "totalFavorites": 0,
+      "updatedAt": "2026-06-17T17:37:28.784Z"
     },
     "children": {
       "name": "Детская",
@@ -158,6 +161,6 @@
       "updatedAt": "2026-06-17T17:33:47.111Z"
     }
   },
-  "currentGroup": 3,
-  "nextGroup": 4
+  "currentGroup": 4,
+  "nextGroup": 0
 }
