@@ -1,6 +1,6 @@
 {
   "startedAt": "2025-01-15T03:00:00.000Z",
-  "finishedAt": "2026-06-17T13:22:11.444Z",
+  "finishedAt": "2026-06-17T15:14:18.290Z",
   "sections_list": [
     {
       "id": "furniture",
@@ -92,15 +92,24 @@
     },
     "bathroom": {
       "name": "Санузел",
-      "totalModels": 298
+      "icon": "🚿",
+      "totalModels": 0,
+      "totalFavorites": 0,
+      "updatedAt": "2026-06-17T15:14:17.592Z"
     },
     "kitchen": {
       "name": "Кухня",
-      "totalModels": 334
+      "icon": "🍳",
+      "totalModels": 0,
+      "totalFavorites": 0,
+      "updatedAt": "2026-06-17T15:14:17.937Z"
     },
     "plants": {
       "name": "Растения",
-      "totalModels": 256
+      "icon": "🌿",
+      "totalModels": 0,
+      "totalFavorites": 0,
+      "updatedAt": "2026-06-17T15:14:18.290Z"
     },
     "tech": {
       "name": "Техника",
@@ -131,6 +140,6 @@
       "totalModels": 891
     }
   },
-  "currentGroup": 0,
-  "nextGroup": 1
+  "currentGroup": 1,
+  "nextGroup": 2
 }
