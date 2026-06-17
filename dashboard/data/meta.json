@@ -1,6 +1,6 @@
 {
   "startedAt": "2025-01-15T03:00:00.000Z",
-  "finishedAt": "2026-06-17T15:58:04.399Z",
+  "finishedAt": "2026-06-17T17:33:47.112Z",
   "sections_list": [
     {
       "id": "furniture",
@@ -138,17 +138,26 @@
     },
     "transport": {
       "name": "Транспорт",
-      "totalModels": 267
+      "icon": "🚗",
+      "totalModels": 0,
+      "totalFavorites": 0,
+      "updatedAt": "2026-06-17T17:33:45.046Z"
     },
     "materials": {
       "name": "Материалы",
-      "totalModels": 534
+      "icon": "🎨",
+      "totalModels": 0,
+      "totalFavorites": 0,
+      "updatedAt": "2026-06-17T17:33:46.051Z"
     },
     "textures": {
       "name": "Текстуры",
-      "totalModels": 891
+      "icon": "🖼️",
+      "totalModels": 0,
+      "totalFavorites": 0,
+      "updatedAt": "2026-06-17T17:33:47.111Z"
     }
   },
-  "currentGroup": 2,
-  "nextGroup": 3
+  "currentGroup": 3,
+  "nextGroup": 4
 }
