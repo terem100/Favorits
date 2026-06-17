@@ -1,34 +1,136 @@
 {
   "startedAt": "2025-01-15T03:00:00.000Z",
-  "finishedAt": "2025-01-15T03:45:00.000Z",
+  "finishedAt": "2026-06-17T13:22:11.444Z",
   "sections_list": [
-    { "id": "furniture", "name": "Мебель" },
-    { "id": "lighting", "name": "Освещение" },
-    { "id": "decor", "name": "Декор" },
-    { "id": "bathroom", "name": "Санузел" },
-    { "id": "kitchen", "name": "Кухня" },
-    { "id": "plants", "name": "Растения" },
-    { "id": "tech", "name": "Техника" },
-    { "id": "exterior", "name": "Экстерьер" },
-    { "id": "other", "name": "Другие модели" },
-    { "id": "children", "name": "Детская" },
-    { "id": "transport", "name": "Транспорт" },
-    { "id": "materials", "name": "Материалы" },
-    { "id": "textures", "name": "Текстуры" }
+    {
+      "id": "furniture",
+      "name": "Мебель",
+      "icon": "🛋️"
+    },
+    {
+      "id": "lighting",
+      "name": "Освещение",
+      "icon": "💡"
+    },
+    {
+      "id": "decor",
+      "name": "Декор",
+      "icon": "🖼️"
+    },
+    {
+      "id": "bathroom",
+      "name": "Санузел",
+      "icon": "🚿"
+    },
+    {
+      "id": "kitchen",
+      "name": "Кухня",
+      "icon": "🍳"
+    },
+    {
+      "id": "plants",
+      "name": "Растения",
+      "icon": "🌿"
+    },
+    {
+      "id": "tech",
+      "name": "Техника",
+      "icon": "📱"
+    },
+    {
+      "id": "exterior",
+      "name": "Экстерьер",
+      "icon": "🏠"
+    },
+    {
+      "id": "children",
+      "name": "Детская",
+      "icon": "🧸"
+    },
+    {
+      "id": "transport",
+      "name": "Транспорт",
+      "icon": "🚗"
+    },
+    {
+      "id": "materials",
+      "name": "Материалы",
+      "icon": "🎨"
+    },
+    {
+      "id": "textures",
+      "name": "Текстуры",
+      "icon": "🖼️"
+    },
+    {
+      "id": "other",
+      "name": "Другие модели",
+      "icon": "📦"
+    }
   ],
   "sections": {
-    "furniture": { "name": "Мебель", "totalModels": 847 },
-    "lighting": { "name": "Освещение", "totalModels": 423 },
-    "decor": { "name": "Декор", "totalModels": 612 },
-    "bathroom": { "name": "Санузел", "totalModels": 298 },
-    "kitchen": { "name": "Кухня", "totalModels": 334 },
-    "plants": { "name": "Растения", "totalModels": 256 },
-    "tech": { "name": "Техника", "totalModels": 189 },
-    "exterior": { "name": "Экстерьер", "totalModels": 445 },
-    "other": { "name": "Другие модели", "totalModels": 378 },
-    "children": { "name": "Детская", "totalModels": 143 },
-    "transport": { "name": "Транспорт", "totalModels": 267 },
-    "materials": { "name": "Материалы", "totalModels": 534 },
-    "textures": { "name": "Текстуры", "totalModels": 891 }
-  }
+    "furniture": {
+      "name": "Мебель",
+      "icon": "🛋️",
+      "totalModels": 0,
+      "totalFavorites": 0,
+      "updatedAt": "2026-06-17T13:22:03.065Z"
+    },
+    "lighting": {
+      "name": "Освещение",
+      "icon": "💡",
+      "totalModels": 0,
+      "totalFavorites": 0,
+      "updatedAt": "2026-06-17T13:22:06.546Z"
+    },
+    "decor": {
+      "name": "Декор",
+      "icon": "🖼️",
+      "totalModels": 0,
+      "totalFavorites": 0,
+      "updatedAt": "2026-06-17T13:22:11.443Z"
+    },
+    "bathroom": {
+      "name": "Санузел",
+      "totalModels": 298
+    },
+    "kitchen": {
+      "name": "Кухня",
+      "totalModels": 334
+    },
+    "plants": {
+      "name": "Растения",
+      "totalModels": 256
+    },
+    "tech": {
+      "name": "Техника",
+      "totalModels": 189
+    },
+    "exterior": {
+      "name": "Экстерьер",
+      "totalModels": 445
+    },
+    "other": {
+      "name": "Другие модели",
+      "totalModels": 378
+    },
+    "children": {
+      "name": "Детская",
+      "totalModels": 143
+    },
+    "transport": {
+      "name": "Транспорт",
+      "totalModels": 267
+    },
+    "materials": {
+      "name": "Материалы",
+      "totalModels": 534
+    },
+    "textures": {
+      "name": "Текстуры",
+      "totalModels": 891
+    }
+  },
+  "currentGroup": 0,
+  "nextGroup": 1
 }

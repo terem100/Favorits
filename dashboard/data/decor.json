@@ -1,0 +1,212 @@
+{
+  "id": "decor",
+  "name": "Декор",
+  "icon": "🖼️",
+  "updatedAt": "2026-06-17T13:22:11.443Z",
+  "totalModels": 0,
+  "totalWithFavorites": 0,
+  "topByFavorites": [],
+  "popularSlugs": [],
+  "newSlugs": [],
+  "subcats": [
+    {
+      "id": "vases",
+      "name": "Вазы",
+      "subcat": "vases"
+    },
+    {
+      "id": "mirrors",
+      "name": "Зеркала",
+      "subcat": "mirrors"
+    },
+    {
+      "id": "carpets",
+      "name": "Ковры",
+      "subcat": "carpets"
+    },
+    {
+      "id": "pillows",
+      "name": "Подушки",
+      "subcat": "pillows"
+    },
+    {
+      "id": "curtains",
+      "name": "Шторы",
+      "subcat": "curtains"
+    },
+    {
+      "id": "sculptures",
+      "name": "Скульптуры",
+      "subcat": "sculptures"
+    },
+    {
+      "id": "clocks",
+      "name": "Часы",
+      "subcat": "clocks"
+    },
+    {
+      "id": "books",
+      "name": "Книги",
+      "subcat": "books"
+    },
+    {
+      "id": "panels-3d",
+      "name": "3D панель",
+      "subcat": "3d-panels"
+    },
+    {
+      "id": "molding",
+      "name": "Лепнина",
+      "subcat": "molding"
+    },
+    {
+      "id": "frames",
+      "name": "Багеты",
+      "subcat": "frames"
+    },
+    {
+      "id": "clothes",
+      "name": "Одежда и обувь",
+      "subcat": "clothes-and-shoes"
+    },
+    {
+      "id": "decor-set",
+      "name": "Декоративный набор",
+      "subcat": "decorative-set"
+    },
+    {
+      "id": "decor-other",
+      "name": "Другие предметы",
+      "subcat": "other-interior-objects"
+    }
+  ],
+  "subcatStats": {
+    "vases": {
+      "id": "vases",
+      "name": "Вазы",
+      "subcat": "vases",
+      "totalFavorites": 0,
+      "modelCount": 0,
+      "topSlug": null,
+      "topFavorites": 0
+    },
+    "mirrors": {
+      "id": "mirrors",
+      "name": "Зеркала",
+      "subcat": "mirrors",
+      "totalFavorites": 0,
+      "modelCount": 0,
+      "topSlug": null,
+      "topFavorites": 0
+    },
+    "carpets": {
+      "id": "carpets",
+      "name": "Ковры",
+      "subcat": "carpets",
+      "totalFavorites": 0,
+      "modelCount": 0,
+      "topSlug": null,
+      "topFavorites": 0
+    },
+    "pillows": {
+      "id": "pillows",
+      "name": "Подушки",
+      "subcat": "pillows",
+      "totalFavorites": 0,
+      "modelCount": 0,
+      "topSlug": null,
+      "topFavorites": 0
+    },
+    "curtains": {
+      "id": "curtains",
+      "name": "Шторы",
+      "subcat": "curtains",
+      "totalFavorites": 0,
+      "modelCount": 0,
+      "topSlug": null,
+      "topFavorites": 0
+    },
+    "sculptures": {
+      "id": "sculptures",
+      "name": "Скульптуры",
+      "subcat": "sculptures",
+      "totalFavorites": 0,
+      "modelCount": 0,
+      "topSlug": null,
+      "topFavorites": 0
+    },
+    "clocks": {
+      "id": "clocks",
+      "name": "Часы",
+      "subcat": "clocks",
+      "totalFavorites": 0,
+      "modelCount": 0,
+      "topSlug": null,
+      "topFavorites": 0
+    },
+    "books": {
+      "id": "books",
+      "name": "Книги",
+      "subcat": "books",
+      "totalFavorites": 0,
+      "modelCount": 0,
+      "topSlug": null,
+      "topFavorites": 0
+    },
+    "panels-3d": {
+      "id": "panels-3d",
+      "name": "3D панель",
+      "subcat": "3d-panels",
+      "totalFavorites": 0,
+      "modelCount": 0,
+      "topSlug": null,
+      "topFavorites": 0
+    },
+    "molding": {
+      "id": "molding",
+      "name": "Лепнина",
+      "subcat": "molding",
+      "totalFavorites": 0,
+      "modelCount": 0,
+      "topSlug": null,
+      "topFavorites": 0
+    },
+    "frames": {
+      "id": "frames",
+      "name": "Багеты",
+      "subcat": "frames",
+      "totalFavorites": 0,
+      "modelCount": 0,
+      "topSlug": null,
+      "topFavorites": 0
+    },
+    "clothes": {
+      "id": "clothes",
+      "name": "Одежда и обувь",
+      "subcat": "clothes-and-shoes",
+      "totalFavorites": 0,
+      "modelCount": 0,
+      "topSlug": null,
+      "topFavorites": 0
+    },
+    "decor-set": {
+      "id": "decor-set",
+      "name": "Декоративный набор",
+      "subcat": "decorative-set",
+      "totalFavorites": 0,
+      "modelCount": 0,
+      "topSlug": null,
+      "topFavorites": 0
+    },
+    "decor-other": {
+      "id": "decor-other",
+      "name": "Другие предметы",
+      "subcat": "other-interior-objects",
+      "totalFavorites": 0,
+      "modelCount": 0,
+      "topSlug": null,
+      "topFavorites": 0
+    }
+  },
+  "models": {}
+}
