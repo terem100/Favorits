@@ -63,23 +63,22 @@ async function launchBrowser() {
   return browser;
 }
 
-// ─── Получаем все модели раздела через перехват API-запросов ─────────────────
-async function fetchAllModels(browser, section) {
-  const allModels = {};
+// ─── Получаем модели одного прохода (один order) ────────────────────────────
+async function fetchOneOrder(browser, section, order) {
+  const models = {};
   const page = await browser.newPage();
-
-  // Притворяемся обычным пользователем
   await page.setExtraHTTPHeaders({ 'Accept-Language': 'ru-RU,ru;q=0.9' });
   await page.setViewport({ width: 1440, height: 900 });
 
-  console.log(`\n  📋 ${section.name}`);
+  const orderLabel = order === 'sell_rating' ? 'по популярности' : 'по новым';
+  console.log(`    📋 Проход: ${orderLabel}`);
   let pageNum = 1;
 
   try {
     while (pageNum <= CONFIG.catalogPages) {
-      const url = `https://3ddd.ru/3dmodels?cat=${section.cat}&${section.subcategories.map(s => `subcat=${s}`).join('&')}&page=${pageNum}`;
+      const orderParam = order ? `&order=${order}` : '';
+      const url = `https://3ddd.ru/3dmodels?cat=${section.cat}&${section.subcategories.map(s => `subcat=${s}`).join('&')}&page=${pageNum}${orderParam}`;
 
-      // Перехватываем ответ /api/models который сайт сам делает при загрузке страницы
       let apiData = null;
       const responseHandler = async (response) => {
         if (response.url().includes('/api/models') && response.request().method() === 'POST') {
@@ -90,23 +89,20 @@ async function fetchAllModels(browser, section) {
         }
       };
       page.on('response', responseHandler);
-
       await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
-      // Даём время на подгрузку если networkidle2 не поймал
       if (!apiData) await delay(3000);
-
       page.off('response', responseHandler);
 
       if (!apiData || !apiData.models?.length) {
-        console.log(`    Стр.${pageNum}: моделей нет, стоп`);
+        console.log(`      Стр.${pageNum}: моделей нет, стоп`);
         break;
       }
 
-      const before = Object.keys(allModels).length;
+      const before = Object.keys(models).length;
       for (const m of apiData.models) {
-        if (!allModels[m.slug]) {
+        if (!models[m.slug]) {
           const img = m.images?.[0];
-          allModels[m.slug] = {
+          models[m.slug] = {
             slug: m.slug,
             url: `https://3ddd.ru/3dmodels/show/${m.slug}`,
             name: m.title || m.title_en || m.slug,
@@ -118,15 +114,21 @@ async function fetchAllModels(browser, section) {
             subcat: m.category?.slug || null,
             subcatName: m.category?.title || null,
             favorites: null,
+            orders: [order || 'date_desc'],
           };
+        } else {
+          // модель встретилась в обоих проходах — отмечаем
+          if (!models[m.slug].orders.includes(order || 'date_desc')) {
+            models[m.slug].orders.push(order || 'date_desc');
+          }
         }
       }
 
-      const added = Object.keys(allModels).length - before;
+      const added = Object.keys(models).length - before;
       const total = apiData.total_value || 0;
       const perPage = apiData.per_page || 60;
       const totalPages = Math.ceil(total / perPage);
-      console.log(`    Стр.${pageNum}/${Math.min(totalPages, CONFIG.catalogPages)}: +${added} новых, итого ${Object.keys(allModels).length}`);
+      console.log(`      Стр.${pageNum}/${Math.min(totalPages, CONFIG.catalogPages)}: +${added} новых, итого ${Object.keys(models).length}`);
 
       if (added === 0 || pageNum >= totalPages) break;
       pageNum++;
@@ -136,6 +138,36 @@ async function fetchAllModels(browser, section) {
     await page.close();
   }
 
+  return models;
+}
+
+// ─── Два прохода: популярные + новые ────────────────────────────────────────
+async function fetchAllModels(browser, section) {
+  console.log(`\n  📦 ${section.name}`);
+
+  // Проход 1: по популярности (sell_rating) — главный
+  const byRating = await fetchOneOrder(browser, section, 'sell_rating');
+
+  // Проход 2: по новым (date_desc) — дополняем тем чего нет в первом
+  const byDate = await fetchOneOrder(browser, section, 'date_desc');
+
+  // Объединяем: приоритет у byRating, из byDate берём только новые slugs
+  const allModels = { ...byRating };
+  let addedFromDate = 0;
+  for (const [slug, m] of Object.entries(byDate)) {
+    if (!allModels[slug]) {
+      allModels[slug] = m;
+      addedFromDate++;
+    } else {
+      // отмечаем что модель есть в обоих списках
+      if (!allModels[slug].orders) allModels[slug].orders = ['sell_rating'];
+      if (!allModels[slug].orders.includes('date_desc')) {
+        allModels[slug].orders.push('date_desc');
+      }
+    }
+  }
+
+  console.log(`  ✓ По популярности: ${Object.keys(byRating).length}, уникальных из новых: +${addedFromDate}, итого: ${Object.keys(allModels).length}`);
   return allModels;
 }
 
