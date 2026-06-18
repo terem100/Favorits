@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 
 const CONFIG = {
-  catalogPages: 50,
+  catalogPages: 10,
   catalogDelayMs: 2000,
   detailDelayMs: 1500,
   outputDir: './dashboard/data',
