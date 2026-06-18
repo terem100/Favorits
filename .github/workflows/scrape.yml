@@ -71,7 +71,7 @@ jobs:
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "3ddd Bot"
+          git pull --rebase origin main
           git add dashboard/data/
           git diff --staged --quiet || git commit -m "📊 Обновление $(date '+%Y-%m-%d') — группа $(cat dashboard/data/rotation-state.json | node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>console.log(JSON.parse(d).currentGroup||0))')"
-          git pull --rebase origin main
           git push

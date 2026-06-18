@@ -1,2 +1,4 @@
 README.md
 scraper/scraper-test.js
+scraper/node_modules/
+scraper/package-lock.json
