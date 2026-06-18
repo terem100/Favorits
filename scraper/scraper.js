@@ -1,362 +1,97 @@
 #!/usr/bin/env node
+// ТЕСТОВЫЙ СКРИПТ — 1 раздел, 1 страница, 5 моделей
+// Проверяет: запуск Chrome, сбор каталога, картинки, избранное
 const puppeteer = require('puppeteer-core');
 const fs = require('fs');
-const path = require('path');
 
-const CONFIG = {
-  catalogPages: 10,
-  catalogDelayMs: 2000,
-  detailDelayMs: 1500,
-  outputDir: './dashboard/data',
-  stateFile: './dashboard/data/rotation-state.json',
-  // Системный Chrome на GitHub Actions Ubuntu
-  chromePath: process.env.CHROME_PATH || '/usr/bin/google-chrome',
-};
+const CHROME_PATH = process.env.CHROME_PATH || '/usr/bin/google-chrome';
 
-const SECTIONS = [
-  { id: 'furniture', name: 'Мебель',        cat: 'furniture',           icon: '🛋️', subcategories: ['armchairs','beds','chairs','consoles','dressing-tables','hallway-furniture','headboards','miscellaneous-furniture','miscellaneous-soft-seating','office-furniture','racks','sideboards-and-chests-of-drawers','sofas','tables','tables-and-chairs','tv-walls','wardrobes-and-display-cabinets'] },
-  { id: 'lighting',  name: 'Освещение',     cat: 'light',               icon: '💡', subcategories: ['built-in-lamps','ceiling-lamps','floor-lamps','neon','pendant-lamps','street-lamps','table-lamps','technical-lamps','wall-lamps'] },
-  { id: 'decor',     name: 'Декор',         cat: 'decor',               icon: '🖼️', subcategories: ['3d-panels','books','carpets','clocks','clothes-and-shoes','curtains','decorative-set','frames','interior-objects','mirrors','molding','pillows','sculptures','vases'] },
-  { id: 'bathroom',  name: 'Санузел',       cat: 'bathroom',            icon: '🚿', subcategories: ['bath-decor','bath-faucets','bathtubs','bathroom-furniture','shower-cabins','towel-rails','wash-basins','wc-and-bidet'] },
-  { id: 'kitchen',   name: 'Кухня',         cat: 'kitchen',             icon: '🍳', subcategories: ['dishes','food-and-drinks','kitchen-appliances','kitchen-faucets','kitchen-furniture','kitchen-sinks','kitchen-stuff'] },
-  { id: 'plants',    name: 'Растения',      cat: 'plants',              icon: '🌿', subcategories: ['bouquets','bushes','grass','indoor-plants','outdoor-plants','phytowalls','trees'] },
-  { id: 'tech',      name: 'Техника',       cat: 'tech',                icon: '📱', subcategories: ['audio','computers-and-electronics','home-appliances','phones','tech-other','tv'] },
-  { id: 'exterior',  name: 'Экстерьер',     cat: 'exterior',            icon: '🏠', subcategories: ['barbecue-and-grill','buildings','exterior-other','facade-elements','fencing','nature-details','pavement','playground','urban-environment'] },
-  { id: 'children',  name: 'Детская',       cat: 'children',            icon: '🧸', subcategories: ['children-beds','children-items','children-tables-and-chairs','children-wardrobes','other-children-items','toys'] },
-  { id: 'transport', name: 'Транспорт',     cat: 'transport',           icon: '🚗', subcategories: ['air-transport','land-transport','water-transport'] },
-  { id: 'materials', name: 'Материалы',     cat: 'materials',           icon: '🎨', subcategories: ['fabric-materials','glass-materials','leather-materials','liquid-materials','metal-materials','miscellaneous-materials','plastic-materials','stone-materials','tile-materials','wood-materials'] },
-  { id: 'textures',  name: 'Текстуры',      cat: 'textures',            icon: '🖼️', subcategories: ['brick-textures','carpet-textures','fabric-textures','floor-textures','hdri','leather-textures','metal-textures','miscellaneous-textures','organic-textures','panoramic','stone-textures','tile-textures','wall-textures','wood-textures'] },
-  { id: 'other',     name: 'Другие модели', cat: 'miscellaneous-models', icon: '📦', subcategories: ['beauty-salon','billiards','doors','fireplaces','living-creatures','miscellaneous-objects','musical-instruments','radiators','restaurant','shop','sport','stairs','weapons','windows'] },
-];
-
-const SECTION_GROUPS = [
-  ['furniture', 'lighting', 'decor'],
-  ['bathroom', 'kitchen', 'plants'],
-  ['tech', 'exterior', 'children'],
-  ['transport', 'materials', 'textures'],
-  ['other'],
-];
-
-function delay(ms, jitter = 0) {
-  return new Promise(r => setTimeout(r, ms + Math.floor(Math.random() * jitter)));
-}
-
-function loadExisting(p) {
-  try { return fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, 'utf8')) : null; } catch { return null; }
-}
-
-// ─── Запускаем браузер один раз на весь скрипт ───────────────────────────────
-async function launchBrowser() {
-  console.log(`🌐 Запуск Chrome: ${CONFIG.chromePath}`);
-  const browser = await puppeteer.launch({
-    executablePath: CONFIG.chromePath,
-    headless: 'new',
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-gpu',
-      '--lang=ru-RU',
-    ],
-  });
-  console.log(`✓ Chrome запущен (версия: ${await browser.version()})`);
-  return browser;
-}
-
-// ─── Получаем модели одного прохода (один order) ────────────────────────────
-async function fetchOneOrder(browser, section, order) {
-  const models = {};
-  const page = await browser.newPage();
-  await page.setExtraHTTPHeaders({ 'Accept-Language': 'ru-RU,ru;q=0.9' });
-  await page.setViewport({ width: 1440, height: 900 });
-
-  const orderLabel = order === 'sell_rating' ? 'по популярности' : 'по новым';
-  console.log(`    📋 Проход: ${orderLabel}`);
-  let pageNum = 1;
-
-  try {
-    while (pageNum <= CONFIG.catalogPages) {
-      const orderParam = order ? `&order=${order}` : '';
-      const url = `https://3ddd.ru/3dmodels?cat=${section.cat}&${section.subcategories.map(s => `subcat=${s}`).join('&')}&page=${pageNum}${orderParam}`;
-
-      let apiData = null;
-      const responseHandler = async (response) => {
-        if (response.url().includes('/api/models') && response.request().method() === 'POST') {
-          try {
-            const json = await response.json();
-            if (json.data?.models?.length) apiData = json.data;
-          } catch {}
-        }
-      };
-      page.on('response', responseHandler);
-      await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
-      if (!apiData) await delay(3000);
-      page.off('response', responseHandler);
-
-      if (!apiData || !apiData.models?.length) {
-        console.log(`      Стр.${pageNum}: моделей нет, стоп`);
-        break;
-      }
-
-      const before = Object.keys(models).length;
-      for (const m of apiData.models) {
-        if (!models[m.slug]) {
-          const img = m.images?.[0];
-          models[m.slug] = {
-            slug: m.slug,
-            url: `https://3ddd.ru/3dmodels/show/${m.slug}`,
-            name: m.title || m.title_en || m.slug,
-            preview: img ? `https://b6.3ddd.ru/media/cache/models-list-webp/${img.web_path}` : null,
-            price: parseInt(m.price || 0),
-            isPro: m.model_type === 'pro',
-            isFree: m.model_type === 'free' || !m.price || m.price === '0',
-            votes: parseInt(m.votes_count || 0),
-            subcat: m.category?.slug || null,
-            subcatName: m.category?.title || null,
-            favorites: null,
-            orders: [order || 'date_desc'],
-          };
-        } else {
-          // модель встретилась в обоих проходах — отмечаем
-          if (!models[m.slug].orders.includes(order || 'date_desc')) {
-            models[m.slug].orders.push(order || 'date_desc');
-          }
-        }
-      }
-
-      const added = Object.keys(models).length - before;
-      const total = apiData.total_value || 0;
-      const perPage = apiData.per_page || 60;
-      const totalPages = Math.ceil(total / perPage);
-      console.log(`      Стр.${pageNum}/${Math.min(totalPages, CONFIG.catalogPages)}: +${added} новых, итого ${Object.keys(models).length}`);
-
-      if (added === 0 || pageNum >= totalPages) break;
-      pageNum++;
-      await delay(CONFIG.catalogDelayMs, 1000);
-    }
-  } finally {
-    await page.close();
-  }
-
-  return models;
-}
-
-// ─── Два прохода: популярные + новые ────────────────────────────────────────
-async function fetchAllModels(browser, section) {
-  console.log(`\n  📦 ${section.name}`);
-
-  // Проход 1: по популярности (sell_rating) — главный
-  const byRating = await fetchOneOrder(browser, section, 'sell_rating');
-
-  // Проход 2: по новым (date_desc) — дополняем тем чего нет в первом
-  const byDate = await fetchOneOrder(browser, section, 'date_desc');
-
-  // Объединяем: приоритет у byRating, из byDate берём только новые slugs
-  const allModels = { ...byRating };
-  let addedFromDate = 0;
-  for (const [slug, m] of Object.entries(byDate)) {
-    if (!allModels[slug]) {
-      allModels[slug] = m;
-      addedFromDate++;
-    } else {
-      // отмечаем что модель есть в обоих списках
-      if (!allModels[slug].orders) allModels[slug].orders = ['sell_rating'];
-      if (!allModels[slug].orders.includes('date_desc')) {
-        allModels[slug].orders.push('date_desc');
-      }
-    }
-  }
-
-  console.log(`  ✓ По популярности: ${Object.keys(byRating).length}, уникальных из новых: +${addedFromDate}, итого: ${Object.keys(allModels).length}`);
-  return allModels;
-}
-
-// ─── Получаем счётчик избранного со страницы каждой модели ──────────────────
-async function enrichFavorites(browser, allModels, existingModels) {
-  const slugs = Object.keys(allModels);
-  if (!slugs.length) return;
-  console.log(`\n  ❤️  Избранное для ${slugs.length} моделей...`);
-
-  const page = await browser.newPage();
-  await page.setViewport({ width: 1440, height: 900 });
-
-  // Пропускаем модели у которых уже есть свежие данные (не старше 6 дней)
-  const freshCutoff = Date.now() - 6 * 24 * 60 * 60 * 1000;
-  const toScan = slugs.filter(slug => {
-    const m = allModels[slug];
-    if (!m.scannedAt) return true;
-    return new Date(m.scannedAt).getTime() < freshCutoff;
-  });
-  const skipped = slugs.length - toScan.length;
-  if (skipped > 0) console.log(`    ⏭️  Пропускаем ${skipped} свежих, сканируем ${toScan.length}`);
-
-  let done = 0, found = 0, errors = 0;
-
-  try {
-    for (const slug of toScan) {
-      const model = allModels[slug];
-      const existing = existingModels?.[slug];
-      if (!model.preview && existing?.preview) model.preview = existing.preview;
-
-      try {
-        await page.goto(`https://3ddd.ru/3dmodels/show/${slug}`, {
-          waitUntil: 'networkidle2',
-          timeout: 30000,
-        });
-
-        // Читаем уже отрендеренный DOM — никакого regex
-        const fav = await page.$eval(
-          '.added-to-collections',
-          el => parseInt(el.textContent.trim()) || null
-        ).catch(() => null);
-
-        if (fav != null) {
-          model.favorites = fav;
-          found++;
-
-          const prev = existing?.favoritesHistory || [];
-          const lastVal = prev.length ? prev[prev.length - 1].value : null;
-          model.favoritesHistory = lastVal !== fav
-            ? [...prev, { date: new Date().toISOString(), value: fav }]
-            : prev;
-        } else if (existing?.favoritesHistory) {
-          model.favoritesHistory = existing.favoritesHistory;
-        }
-
-        // Имя и превью если не было
-        if (!model.name || model.name === slug) {
-          const t = await page.$eval('meta[property="og:title"]', el => el.content).catch(() => null);
-          if (t) model.name = t.replace(/\s*-.*$/, '').trim();
-        }
-        if (!model.preview) {
-          const i = await page.$eval('meta[property="og:image"]', el => el.content).catch(() => null);
-          if (i) model.preview = i;
-        }
-
-        model.scannedAt = new Date().toISOString();
-        done++;
-      } catch (e) {
-        errors++;
-      }
-
-      if ((done + errors) % 20 === 0) {
-        console.log(`    ${done + errors}/${slugs.length} готово, ❤️ найдено: ${found}`);
-      }
-      await delay(CONFIG.detailDelayMs, 1000);
-    }
-  } finally {
-    await page.close();
-  }
-
-  console.log(`  ✓ ${done} обработано, ❤️ найдено: ${found}, ошибок: ${errors}`);
-}
-
-// ─── Обработка одного раздела ────────────────────────────────────────────────
-async function processSection(browser, section) {
-  console.log(`\n${'═'.repeat(48)}\n  ${section.icon} ${section.name}\n${'═'.repeat(48)}`);
-  const filePath = path.join(CONFIG.outputDir, `${section.id}.json`);
-  const existing = loadExisting(filePath);
-
-  const allModels = await fetchAllModels(browser, section);
-
-  // Подтягиваем старые модели
-  if (existing?.models) {
-    for (const [slug, m] of Object.entries(existing.models)) {
-      if (!allModels[slug]) allModels[slug] = m;
-    }
-  }
-  console.log(`  📦 Всего: ${Object.keys(allModels).length}`);
-
-  await enrichFavorites(browser, allModels, existing?.models);
-
-  const topByFavorites = Object.values(allModels)
-    .filter(m => m.favorites != null)
-    .sort((a, b) => b.favorites - a.favorites)
-    .map(m => m.slug);
-
-  const subcatStats = {};
-  for (const m of Object.values(allModels)) {
-    if (!m.subcat) continue;
-    if (!subcatStats[m.subcat]) subcatStats[m.subcat] = { id: m.subcat, name: m.subcatName || m.subcat, totalFavorites: 0, modelCount: 0, topFavorites: 0, topSlug: null };
-    subcatStats[m.subcat].modelCount++;
-    if (m.favorites) {
-      subcatStats[m.subcat].totalFavorites += m.favorites;
-      if (m.favorites > subcatStats[m.subcat].topFavorites) {
-        subcatStats[m.subcat].topFavorites = m.favorites;
-        subcatStats[m.subcat].topSlug = m.slug;
-      }
-    }
-  }
-
-  const output = {
-    id: section.id, name: section.name, icon: section.icon,
-    updatedAt: new Date().toISOString(),
-    totalModels: Object.keys(allModels).length,
-    totalWithFavorites: topByFavorites.length,
-    topByFavorites, subcatStats, models: allModels,
-  };
-  fs.writeFileSync(filePath, JSON.stringify(output, null, 2));
-  const top = allModels[topByFavorites[0]];
-  console.log(`  💾 Сохранено: ${output.totalModels} моделей, ${output.totalWithFavorites} с избранным`);
-  if (top) console.log(`  🏆 Топ: "${top.name}" — ${top.favorites} ❤️`);
-}
-
-// ─── Главная функция ─────────────────────────────────────────────────────────
 async function main() {
-  console.log('🚀 3ddd Scraper (Puppeteer)');
-  console.log(`📅 ${new Date().toISOString()}`);
-  fs.mkdirSync(CONFIG.outputDir, { recursive: true });
+  console.log('🧪 Тест скрапера');
+  console.log(`🌐 Chrome: ${CHROME_PATH}`);
 
-  const rotState = loadExisting(CONFIG.stateFile) || { currentGroup: 0 };
-  const groupIndex = rotState.currentGroup % SECTION_GROUPS.length;
-  const todayIds = SECTION_GROUPS[groupIndex];
-  const todaySections = SECTIONS.filter(s => todayIds.includes(s.id));
+  const browser = await puppeteer.launch({
+    executablePath: CHROME_PATH,
+    headless: 'new',
+    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
+  });
+  console.log(`✓ Chrome: ${await browser.version()}\n`);
 
-  console.log(`\n🔄 Группа ${groupIndex + 1}/${SECTION_GROUPS.length}: ${todaySections.map(s => s.name).join(', ')}`);
+  // ШАГ 1: Каталог — берём 1 страницу мебели
+  console.log('📋 Шаг 1: Сбор каталога (1 страница мебели)...');
+  const page = await browser.newPage();
+  await page.setViewport({ width: 1440, height: 900 });
 
-  const browser = await launchBrowser();
-  try {
-    for (const section of todaySections) {
-      await processSection(browser, section);
+  let apiData = null;
+  page.on('response', async (response) => {
+    if (response.url().includes('/api/models') && response.request().method() === 'POST') {
+      try { const json = await response.json(); if (json.data?.models?.length) apiData = json.data; } catch {}
     }
-  } finally {
-    await browser.close();
+  });
+
+  await page.goto('https://3ddd.ru/3dmodels?cat=furniture&order=sell_rating&page=1', { waitUntil: 'networkidle2', timeout: 30000 });
+  if (!apiData) await new Promise(r => setTimeout(r, 3000));
+  await page.close();
+
+  if (!apiData?.models?.length) {
+    console.log('❌ Каталог не загрузился'); await browser.close(); process.exit(1);
   }
 
-  // Обновляем meta.json
-  const metaPath = path.join(CONFIG.outputDir, 'meta.json');
-  const existingMeta = loadExisting(metaPath) || {};
-  const sections = existingMeta.sections || {};
-  for (const s of todaySections) {
-    const d = loadExisting(path.join(CONFIG.outputDir, `${s.id}.json`));
-    if (!d) continue;
-    const top = d.topByFavorites?.map(sl => d.models[sl]).find(m => m?.favorites != null);
-    sections[s.id] = {
-      name: s.name, icon: s.icon,
-      totalModels: d.totalModels,
-      totalFavorites: Object.values(d.models).reduce((a, m) => a + (m.favorites || 0), 0),
-      updatedAt: d.updatedAt,
-      topModel: top?.name,
-      topFavorites: top?.favorites,
+  // Берём только 5 моделей для теста
+  const testModels = apiData.models.slice(0, 5).map(m => {
+    const img = m.images?.[0];
+    return {
+      slug: m.slug,
+      name: m.title || m.slug,
+      preview: img ? `https://b6.3ddd.ru/media/cache/models-list-webp/${img.web_path}` : null,
+      votes: parseInt(m.votes_count || 0),
+      favorites: null,
     };
+  });
+
+  console.log(`✓ Получено ${testModels.length} моделей:`);
+  testModels.forEach(m => console.log(`  - ${m.name} (👍 ${m.votes})`));
+
+  // ШАГ 2: Проверяем картинку первой модели
+  console.log('\n🖼️  Шаг 2: Проверка картинки...');
+  const firstPreview = testModels[0].preview;
+  console.log(`  URL: ${firstPreview}`);
+  const testPage = await browser.newPage();
+  const imgResponse = await testPage.goto(firstPreview, { timeout: 10000 }).catch(() => null);
+  console.log(imgResponse?.status() === 200 ? '✓ Картинка загружается' : `❌ Картинка: статус ${imgResponse?.status()}`);
+  await testPage.close();
+
+  // ШАГ 3: Избранное для 5 моделей
+  console.log('\n❤️  Шаг 3: Сбор избранного...');
+  const detailPage = await browser.newPage();
+  await detailPage.setViewport({ width: 1440, height: 900 });
+  let found = 0;
+
+  for (const model of testModels) {
+    await detailPage.goto(`https://3ddd.ru/3dmodels/show/${model.slug}`, { waitUntil: 'networkidle2', timeout: 30000 });
+    model.favorites = await detailPage.$eval('.added-to-collections', el => parseInt(el.textContent.trim()) || null).catch(() => null);
+    console.log(`  ${model.name}: ❤️ ${model.favorites ?? 'не найдено'}`);
+    if (model.favorites != null) found++;
+    await new Promise(r => setTimeout(r, 1500));
+  }
+  await detailPage.close();
+
+  // Результат
+  console.log('\n📊 Итог:');
+  console.log(`  Моделей: ${testModels.length}`);
+  console.log(`  Картинка: ${firstPreview ? '✓' : '❌'}`);
+  console.log(`  Избранное найдено: ${found}/${testModels.length}`);
+
+  fs.writeFileSync('test-result.json', JSON.stringify(testModels, null, 2));
+  console.log('\n✅ Готово! Результат в test-result.json');
+
+  if (found === testModels.length) {
+    console.log('🎉 Всё работает правильно!');
+  } else {
+    console.log('⚠️  Не все избранные нашлись — проверь test-result.json');
   }
 
-  fs.writeFileSync(metaPath, JSON.stringify({
-    ...existingMeta,
-    finishedAt: new Date().toISOString(),
-    currentGroup: groupIndex,
-    nextGroup: (groupIndex + 1) % SECTION_GROUPS.length,
-    sections_list: SECTIONS.map(s => ({ id: s.id, name: s.name, icon: s.icon })),
-    sections,
-  }, null, 2));
-
-  fs.writeFileSync(CONFIG.stateFile, JSON.stringify({
-    currentGroup: (groupIndex + 1) % SECTION_GROUPS.length,
-    lastRun: new Date().toISOString(),
-    lastSections: todaySections.map(s => s.name),
-  }, null, 2));
-
-  console.log('\n✅ Готово!');
+  await browser.close();
 }
 
 main().catch(err => { console.error('💥', err); process.exit(1); });
