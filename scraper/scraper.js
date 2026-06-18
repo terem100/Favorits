@@ -6,7 +6,7 @@ const path = require('path');
 const CONFIG = {
   catalogPages: 50,
   catalogDelayMs: 2000,
-  detailDelayMs: 3000,
+  detailDelayMs: 1500,
   outputDir: './dashboard/data',
   stateFile: './dashboard/data/rotation-state.json',
   // Системный Chrome на GitHub Actions Ubuntu
@@ -106,7 +106,7 @@ async function fetchOneOrder(browser, section, order) {
             slug: m.slug,
             url: `https://3ddd.ru/3dmodels/show/${m.slug}`,
             name: m.title || m.title_en || m.slug,
-            preview: img ? `https://b6.3ddd.ru/${img.web_path}` : null,
+            preview: img ? `https://b6.3ddd.ru/media/cache/models-list-webp/${img.web_path}` : null,
             price: parseInt(m.price || 0),
             isPro: m.model_type === 'pro',
             isFree: m.model_type === 'free' || !m.price || m.price === '0',
@@ -180,10 +180,20 @@ async function enrichFavorites(browser, allModels, existingModels) {
   const page = await browser.newPage();
   await page.setViewport({ width: 1440, height: 900 });
 
+  // Пропускаем модели у которых уже есть свежие данные (не старше 6 дней)
+  const freshCutoff = Date.now() - 6 * 24 * 60 * 60 * 1000;
+  const toScan = slugs.filter(slug => {
+    const m = allModels[slug];
+    if (!m.scannedAt) return true;
+    return new Date(m.scannedAt).getTime() < freshCutoff;
+  });
+  const skipped = slugs.length - toScan.length;
+  if (skipped > 0) console.log(`    ⏭️  Пропускаем ${skipped} свежих, сканируем ${toScan.length}`);
+
   let done = 0, found = 0, errors = 0;
 
   try {
-    for (const slug of slugs) {
+    for (const slug of toScan) {
       const model = allModels[slug];
       const existing = existingModels?.[slug];
       if (!model.preview && existing?.preview) model.preview = existing.preview;
