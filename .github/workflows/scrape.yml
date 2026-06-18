@@ -2,11 +2,19 @@ name: 3ddd Scraper
 
 on:
   schedule:
-    - cron: '0 3 * * *'  # каждую ночь в 6:00 Москва
+    - cron: '0 3 * * *'
   workflow_dispatch:
     inputs:
+      mode:
+        description: 'Режим: scrape (основной) или test (тест 5 моделей)'
+        required: false
+        default: 'scrape'
+        type: choice
+        options:
+          - scrape
+          - test
       group:
-        description: 'Номер группы разделов (0-4), или оставь пустым для авто'
+        description: 'Номер группы (0-4), только для режима scrape'
         required: false
         default: ''
 
@@ -39,7 +47,7 @@ jobs:
           echo "CHROME_PATH=$CHROME" >> $GITHUB_ENV
 
       - name: Переопределить группу (если задана вручную)
-        if: ${{ github.event.inputs.group != '' }}
+        if: ${{ github.event.inputs.group != '' && github.event.inputs.mode != 'test' }}
         run: |
           node -e "
             const fs = require('fs');
@@ -50,10 +58,16 @@ jobs:
             fs.writeFileSync(p, JSON.stringify(s, null, 2));
           "
 
-      - name: Запуск сканера
+      - name: Запуск теста (5 моделей)
+        if: ${{ github.event.inputs.mode == 'test' }}
+        run: node scraper/scraper-test.js
+
+      - name: Запуск основного сканера
+        if: ${{ github.event.inputs.mode != 'test' }}
         run: node scraper/scraper.js
 
       - name: Коммит данных
+        if: ${{ github.event.inputs.mode != 'test' }}
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "3ddd Bot"
